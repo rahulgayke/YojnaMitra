@@ -10,7 +10,8 @@ async def main(timeout_seconds: int = 60) -> int:
     settings = Settings(postgres_host="localhost")
     deadline = time.monotonic() + timeout_seconds
 
-    while time.monotonic() < deadline:
+    # Polling is intentional here because readiness depends on external services, not an asyncio Event.
+    while time.monotonic() < deadline:  # noqa: ASYNC110
         services = Services.from_settings(settings)
         try:
             await services.database.ping()

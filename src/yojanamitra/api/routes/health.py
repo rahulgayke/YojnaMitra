@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Awaitable
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -9,6 +9,8 @@ from yojanamitra.api.dependencies import get_services
 from yojanamitra.infrastructure.services import Services
 
 router = APIRouter(prefix="/health", tags=["health"])
+
+ServicesDependency = Annotated[Services, Depends(get_services)]
 
 
 class LivenessResponse(BaseModel):
@@ -55,7 +57,7 @@ async def _readiness_payload(services: Services) -> ReadinessResponse:
 
 
 @router.get("/ready", response_model=ReadinessResponse)
-async def readiness(services: Services = Depends(get_services)) -> ReadinessResponse:
+async def readiness(services: ServicesDependency) -> ReadinessResponse:
     payload = await _readiness_payload(services)
     if payload.status != "ok":
         raise HTTPException(
@@ -66,5 +68,5 @@ async def readiness(services: Services = Depends(get_services)) -> ReadinessResp
 
 
 @router.get("", response_model=ReadinessResponse)
-async def health(services: Services = Depends(get_services)) -> ReadinessResponse:
+async def health(services: ServicesDependency) -> ReadinessResponse:
     return await readiness(services)
