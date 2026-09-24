@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     environment: Literal["local", "test", "development", "staging", "production"] = "local"
     api_version: str = "v1"
     debug: bool = False
+    # Local SQLite keeps this stage testable without a database server.
+    database_url: str = "sqlite:///./yojanamitra.db"
 
 
 @lru_cache

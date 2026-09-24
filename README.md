@@ -1,155 +1,96 @@
-# YojanaMitra
+# YojanaMitra — Stage 1 (Structured Domain Model)
 
-YojanaMitra is an open-source government-scheme discovery and guidance platform for Indian citizens. The system will eventually combine verified government information, deterministic eligibility evaluation, retrieval-augmented generation (RAG), and a citizen-facing web application.
+An open-source, incrementally tested Indian government-scheme advisor. The core product rule
+is: **the LLM coordinates and explains; deterministic systems decide; official evidence
+grounds claims.** Stage 1 introduces structure only; no verified schemes or eligibility
+results are provided yet.
 
-This repository is being built incrementally. **Stage 0 intentionally contains no scheme database, vector database, LLM, RAG pipeline, eligibility engine, or production deployment infrastructure.**
+The corrected Stage 0 health API and source-resolution safeguard are preserved. See
+[`PROJECT_DELIVERY_PLAN.md`](PROJECT_DELIVERY_PLAN.md),
+[`TASK_TRACKER.md`](TASK_TRACKER.md) and
+[`docs/architecture/STAGE-1-DATA-MODEL.md`](docs/architecture/STAGE-1-DATA-MODEL.md).
 
-## Stage 0 scope
+## What you get
 
-Stage 0 establishes the development contract and the smallest runnable backend slice:
+- Six typed ORM entities and strict Pydantic input/output contracts.
+- Migration-managed local persistence using SQLAlchemy and Alembic.
+- SQLite by default so Stage 1 can be tested without Docker; an optional PostgreSQL driver
+  and database URL for the planned production data layer.
+- `GET /api/v1/schemes/{scheme_id}` returning stored metadata and sources.
+- Synthetic-only, idempotent CLI test fixture; it cannot seed production settings.
+- Isolated model/schema/migration/API tests and mandatory function/method docstrings.
+- `frontend/` remains a separate future Next.js application boundary.
 
-- Python backend package
-- environment-based configuration
-- minimal FastAPI application
-- `GET /api/v1/health`
-- shared API response/error schemas
-- Pytest smoke tests
-- documentation and ADR structure
-- separate frontend application boundary
-- repeatable local commands for every test gate
-
-See [`TASK_TRACKER.md`](TASK_TRACKER.md) for stage-by-stage delivery status.
-
-## Repository layout
-
-```text
-yojanamitra/
-├── backend/                 # FastAPI + future AI/domain services
-│   ├── src/yojanamitra/
-│   └── tests/
-├── frontend/                # Separate citizen-facing web application
-├── docs/
-│   ├── architecture/
-│   ├── decisions/
-│   └── standards/
-├── PROJECT_DELIVERY_PLAN.md
-├── TASK_TRACKER.md
-└── OPEN_SOURCE_STACK.md
-```
-
-## Prerequisites
-
-- Python 3.11 or newer
-- Git
-
-No Docker, database, model server, or frontend runtime is required for Stage 0.
-
-## Backend setup
-
-Run the installation and API commands from the `backend` directory. Tests also work
-from the repository root using its `pytest.ini`; both paths explicitly load this checkout.
-
-### 1. Create a virtual environment
-
-Windows PowerShell:
+## Install (PowerShell)
 
 ```powershell
+cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-macOS/Linux:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-### 2. Install the backend and developer dependencies
-
-```bash
-python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-### 3. Run tests
+Use this checkout's virtual environment rather than one from an earlier YojanaMitra version.
+For future local PostgreSQL support, install `python -m pip install -e ".[dev,postgres]"`
+and set `YOJANAMITRA_DATABASE_URL` to a `postgresql+psycopg://...` URL. That path is **not**
+needed for Stage 1's SQLite acceptance gate.
 
-```bash
+## Test each layer
+
+Run from `backend/`:
+
+```powershell
+python -m pytest tests/test_domain_schemas.py
+python -m pytest tests/test_database.py
+python -m pytest tests/test_demo_cli.py
+python -m pytest tests/test_schemes_api.py
 python -m pytest
 ```
 
-Expected Stage 0 result: all tests pass. You can also return to the repository
-root and run `python -m pytest` there. The root `pytest.ini` ensures the
-current `backend/src` package is used even if an older YojanaMitra stage was
-previously installed.
-
-If imports seem wrong, use this diagnostic from `backend/`:
+Or from repository root:
 
 ```powershell
-python -c "import yojanamitra; print(yojanamitra.__file__)"
+python -m pytest
 ```
 
-It should point to this checkout's `backend/src/yojanamitra/__init__.py`.
-Do not mix Stage 0 and the older Stage 1/2 repositories in one virtual environment.
-Create/activate `backend/.venv` before installing this project.
+Both paths are configured to import this checkout, not a stale editable install.
 
-### 4. Start the API
+## Run the API and sample data
 
-```bash
+From `backend/` in the active virtual environment:
+
+```powershell
+python -m alembic upgrade head
+python -m yojanamitra.cli seed-demo
 python -m uvicorn yojanamitra.main:app --reload
 ```
 
-Then test it from another terminal:
+In another PowerShell terminal:
 
-```bash
-curl http://127.0.0.1:8000/api/v1/health
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme
 ```
 
-Expected response:
+The sample is labeled **NOT A GOVERNMENT SCHEME** and its source is **NOT OFFICIAL**. It is
+only for testing the data flow. The scheme response has `status: "unknown"`. Try a missing ID
+(`nonexistent`) and check that it returns HTTP 404. API docs: <http://127.0.0.1:8000/docs>.
 
-```json
-{
-  "status": "ok",
-  "service": "yojanamitra-api",
-  "environment": "local",
-  "api_version": "v1"
-}
-```
+Do not call `Base.metadata.create_all()` against your application DB: use `alembic upgrade
+head` so schema history is retained. Tests use isolated temporary databases.
 
-Interactive OpenAPI docs are available locally at:
+## Quality gate before committing
 
-```text
-http://127.0.0.1:8000/docs
-```
-
-## Local quality checks
-
-Use module-style commands so they work reliably across Windows, macOS, and Linux:
-
-```bash
+```powershell
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy src
 python -m pytest
 ```
 
-Ruff formatting fixes can be applied with:
+All Python functions and methods need meaningful docstrings. Test output and limitations are
+recorded in [`STAGE-1-ACCEPTANCE.md`](docs/architecture/STAGE-1-ACCEPTANCE.md).
 
-```bash
-python -m ruff format .
-python -m ruff check . --fix
-```
-
-## Development rule
-
-Every stage follows the same sequence:
-
-1. Define the service/layer contract.
-2. Implement the smallest working unit.
-3. Add unit tests.
-4. Add an integration/endpoint/CLI check where appropriate.
-5. Run the complete test gate.
-6. Update `TASK_TRACKER.md`.
-7. Only then integrate the next service.
-
-Every Python function and method must have a useful docstring. Comments should explain non-obvious decisions rather than restating the code.
+No LLM, eligibility evaluation, real scheme records, document ingestion, Qdrant, or frontend
+features have been added. Stage 2 is the **official source registry and ~20 manually verified
+Central Government seed schemes**.

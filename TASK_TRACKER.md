@@ -20,19 +20,25 @@ Status legend: `[ ] Not started` · `[-] In progress` · `[x] Complete` · `[!] 
 **Stage 0 gate:** ✅ app imports, health endpoint responds, and the Stage 0 test suite passes.
 
 ## Stage 1 — Structured Domain Model
-- [ ] Implement Scheme model/schema
-- [ ] Implement Source model/schema
-- [ ] Implement EligibilityRule model/schema
-- [ ] Implement Document model/schema
-- [ ] Implement Chunk model/schema
-- [ ] Implement UserProfile model/schema
-- [ ] Define enums and validation constraints
-- [ ] Add database migration
-- [ ] Add model validation tests
-- [ ] Add create/read integration test
-- [ ] Add sample scheme detail endpoint
+- [x] Implement Scheme model/schema
+- [x] Implement Source model/schema
+- [x] Implement EligibilityRule model/schema
+- [x] Implement Document model/schema
+- [x] Implement Chunk model/schema
+- [x] Implement UserProfile model/schema
+- [x] Define enums and validation constraints
+- [x] Add explicit Alembic database migration
+- [x] Add model validation tests
+- [x] Add SQLite create/read integration test
+- [x] Add sample scheme detail endpoint
+- [x] Add safe, idempotent synthetic demo seeder
+- [x] Preserve Stage 0 regression tests and enforce function/method docstrings
+- [ ] Run optional live PostgreSQL migration test (server unavailable in this workspace)
+- [ ] Run Ruff and mypy in developer environment (not downloadable in this workspace)
 
-**Stage 1 gate:** core entities persist and validate correctly.
+**Stage 1 functional gate:** ✅ all local SQLite, schema, CLI and API tests pass.
+PostgreSQL and static-analysis gates remain explicitly pending; run the documented quality
+commands before committing and report any failures rather than assuming they passed.
 
 ## Stage 2 — Official Source Registry and Seed Dataset
 - [ ] Select ~20 Central Government schemes

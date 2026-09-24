@@ -1,1 +1,1 @@
-"""FastAPI route modules."""
+"""HTTP routes for independent domain and health services."""

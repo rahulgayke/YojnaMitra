@@ -3,7 +3,8 @@
 import ast
 from pathlib import Path
 
-ROOTS_TO_CHECK = (Path("src"), Path("tests"))
+BACKEND = Path(__file__).resolve().parents[1]
+ROOTS_TO_CHECK = (BACKEND / "src", BACKEND / "tests", BACKEND / "migrations")
 
 
 def _iter_python_files() -> list[Path]:

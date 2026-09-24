@@ -1,0 +1,2285 @@
+diff --git a/.gitignore b/.gitignore
+index cead05a..e523346 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -27,3 +27,8 @@ out/
+ .idea/
+ .DS_Store
+ Thumbs.db
++
++# Local Stage 1 database files
++*.db
++*.db-journal
++*.sqlite3
+diff --git a/README.md b/README.md
+index 3e90066..149d0df 100644
+--- a/README.md
++++ b/README.md
+@@ -1,155 +1,96 @@
+-# YojanaMitra
+-
+-YojanaMitra is an open-source government-scheme discovery and guidance platform for Indian citizens. The system will eventually combine verified government information, deterministic eligibility evaluation, retrieval-augmented generation (RAG), and a citizen-facing web application.
+-
+-This repository is being built incrementally. **Stage 0 intentionally contains no scheme database, vector database, LLM, RAG pipeline, eligibility engine, or production deployment infrastructure.**
+-
+-## Stage 0 scope
+-
+-Stage 0 establishes the development contract and the smallest runnable backend slice:
+-
+-- Python backend package
+-- environment-based configuration
+-- minimal FastAPI application
+-- `GET /api/v1/health`
+-- shared API response/error schemas
+-- Pytest smoke tests
+-- documentation and ADR structure
+-- separate frontend application boundary
+-- repeatable local commands for every test gate
+-
+-See [`TASK_TRACKER.md`](TASK_TRACKER.md) for stage-by-stage delivery status.
+-
+-## Repository layout
+-
+-```text
+-yojanamitra/
+-├── backend/                 # FastAPI + future AI/domain services
+-│   ├── src/yojanamitra/
+-│   └── tests/
+-├── frontend/                # Separate citizen-facing web application
+-├── docs/
+-│   ├── architecture/
+-│   ├── decisions/
+-│   └── standards/
+-├── PROJECT_DELIVERY_PLAN.md
+-├── TASK_TRACKER.md
+-└── OPEN_SOURCE_STACK.md
+-```
+-
+-## Prerequisites
++# YojanaMitra — Stage 1 (Structured Domain Model)
+ 
+-- Python 3.11 or newer
+-- Git
++An open-source, incrementally tested Indian government-scheme advisor. The core product rule
++is: **the LLM coordinates and explains; deterministic systems decide; official evidence
++grounds claims.** Stage 1 introduces structure only; no verified schemes or eligibility
++results are provided yet.
+ 
+-No Docker, database, model server, or frontend runtime is required for Stage 0.
++The corrected Stage 0 health API and source-resolution safeguard are preserved. See
++[`PROJECT_DELIVERY_PLAN.md`](PROJECT_DELIVERY_PLAN.md),
++[`TASK_TRACKER.md`](TASK_TRACKER.md) and
++[`docs/architecture/STAGE-1-DATA-MODEL.md`](docs/architecture/STAGE-1-DATA-MODEL.md).
+ 
+-## Backend setup
++## What you get
+ 
+-Run the installation and API commands from the `backend` directory. Tests also work
+-from the repository root using its `pytest.ini`; both paths explicitly load this checkout.
++- Six typed ORM entities and strict Pydantic input/output contracts.
++- Migration-managed local persistence using SQLAlchemy and Alembic.
++- SQLite by default so Stage 1 can be tested without Docker; an optional PostgreSQL driver
++  and database URL for the planned production data layer.
++- `GET /api/v1/schemes/{scheme_id}` returning stored metadata and sources.
++- Synthetic-only, idempotent CLI test fixture; it cannot seed production settings.
++- Isolated model/schema/migration/API tests and mandatory function/method docstrings.
++- `frontend/` remains a separate future Next.js application boundary.
+ 
+-### 1. Create a virtual environment
+-
+-Windows PowerShell:
++## Install (PowerShell)
+ 
+ ```powershell
++cd backend
+ python -m venv .venv
+ .\.venv\Scripts\Activate.ps1
++python -m pip install -e ".[dev]"
+ ```
+ 
+-macOS/Linux:
+-
+-```bash
+-python -m venv .venv
+-source .venv/bin/activate
+-```
+-
+-### 2. Install the backend and developer dependencies
++Use this checkout's virtual environment rather than one from an earlier YojanaMitra version.
++For future local PostgreSQL support, install `python -m pip install -e ".[dev,postgres]"`
++and set `YOJANAMITRA_DATABASE_URL` to a `postgresql+psycopg://...` URL. That path is **not**
++needed for Stage 1's SQLite acceptance gate.
+ 
+-```bash
+-python -m pip install --upgrade pip
+-python -m pip install -e ".[dev]"
+-```
++## Test each layer
+ 
+-### 3. Run tests
++Run from `backend/`:
+ 
+-```bash
++```powershell
++python -m pytest tests/test_domain_schemas.py
++python -m pytest tests/test_database.py
++python -m pytest tests/test_demo_cli.py
++python -m pytest tests/test_schemes_api.py
+ python -m pytest
+ ```
+ 
+-Expected Stage 0 result: all tests pass. You can also return to the repository
+-root and run `python -m pytest` there. The root `pytest.ini` ensures the
+-current `backend/src` package is used even if an older YojanaMitra stage was
+-previously installed.
+-
+-If imports seem wrong, use this diagnostic from `backend/`:
++Or from repository root:
+ 
+ ```powershell
+-python -c "import yojanamitra; print(yojanamitra.__file__)"
++python -m pytest
+ ```
+ 
+-It should point to this checkout's `backend/src/yojanamitra/__init__.py`.
+-Do not mix Stage 0 and the older Stage 1/2 repositories in one virtual environment.
+-Create/activate `backend/.venv` before installing this project.
++Both paths are configured to import this checkout, not a stale editable install.
+ 
+-### 4. Start the API
++## Run the API and sample data
+ 
+-```bash
+-python -m uvicorn yojanamitra.main:app --reload
+-```
+-
+-Then test it from another terminal:
++From `backend/` in the active virtual environment:
+ 
+-```bash
+-curl http://127.0.0.1:8000/api/v1/health
++```powershell
++python -m alembic upgrade head
++python -m yojanamitra.cli seed-demo
++python -m uvicorn yojanamitra.main:app --reload
+ ```
+ 
+-Expected response:
++In another PowerShell terminal:
+ 
+-```json
+-{
+-  "status": "ok",
+-  "service": "yojanamitra-api",
+-  "environment": "local",
+-  "api_version": "v1"
+-}
++```powershell
++Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
++Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme
+ ```
+ 
+-Interactive OpenAPI docs are available locally at:
+-
+-```text
+-http://127.0.0.1:8000/docs
+-```
++The sample is labeled **NOT A GOVERNMENT SCHEME** and its source is **NOT OFFICIAL**. It is
++only for testing the data flow. The scheme response has `status: "unknown"`. Try a missing ID
++(`nonexistent`) and check that it returns HTTP 404. API docs: <http://127.0.0.1:8000/docs>.
+ 
+-## Local quality checks
++Do not call `Base.metadata.create_all()` against your application DB: use `alembic upgrade
++head` so schema history is retained. Tests use isolated temporary databases.
+ 
+-Use module-style commands so they work reliably across Windows, macOS, and Linux:
++## Quality gate before committing
+ 
+-```bash
++```powershell
+ python -m ruff check .
+ python -m ruff format --check .
+ python -m mypy src
+ python -m pytest
+ ```
+ 
+-Ruff formatting fixes can be applied with:
+-
+-```bash
+-python -m ruff format .
+-python -m ruff check . --fix
+-```
+-
+-## Development rule
+-
+-Every stage follows the same sequence:
+-
+-1. Define the service/layer contract.
+-2. Implement the smallest working unit.
+-3. Add unit tests.
+-4. Add an integration/endpoint/CLI check where appropriate.
+-5. Run the complete test gate.
+-6. Update `TASK_TRACKER.md`.
+-7. Only then integrate the next service.
++All Python functions and methods need meaningful docstrings. Test output and limitations are
++recorded in [`STAGE-1-ACCEPTANCE.md`](docs/architecture/STAGE-1-ACCEPTANCE.md).
+ 
+-Every Python function and method must have a useful docstring. Comments should explain non-obvious decisions rather than restating the code.
++No LLM, eligibility evaluation, real scheme records, document ingestion, Qdrant, or frontend
++features have been added. Stage 2 is the **official source registry and ~20 manually verified
++Central Government seed schemes**.
+diff --git a/TASK_TRACKER.md b/TASK_TRACKER.md
+index cdbe024..6084881 100644
+--- a/TASK_TRACKER.md
++++ b/TASK_TRACKER.md
+@@ -20,19 +20,25 @@ Status legend: `[ ] Not started` · `[-] In progress` · `[x] Complete` · `[!]
+ **Stage 0 gate:** ✅ app imports, health endpoint responds, and the Stage 0 test suite passes.
+ 
+ ## Stage 1 — Structured Domain Model
+-- [ ] Implement Scheme model/schema
+-- [ ] Implement Source model/schema
+-- [ ] Implement EligibilityRule model/schema
+-- [ ] Implement Document model/schema
+-- [ ] Implement Chunk model/schema
+-- [ ] Implement UserProfile model/schema
+-- [ ] Define enums and validation constraints
+-- [ ] Add database migration
+-- [ ] Add model validation tests
+-- [ ] Add create/read integration test
+-- [ ] Add sample scheme detail endpoint
+-
+-**Stage 1 gate:** core entities persist and validate correctly.
++- [x] Implement Scheme model/schema
++- [x] Implement Source model/schema
++- [x] Implement EligibilityRule model/schema
++- [x] Implement Document model/schema
++- [x] Implement Chunk model/schema
++- [x] Implement UserProfile model/schema
++- [x] Define enums and validation constraints
++- [x] Add explicit Alembic database migration
++- [x] Add model validation tests
++- [x] Add SQLite create/read integration test
++- [x] Add sample scheme detail endpoint
++- [x] Add safe, idempotent synthetic demo seeder
++- [x] Preserve Stage 0 regression tests and enforce function/method docstrings
++- [ ] Run optional live PostgreSQL migration test (server unavailable in this workspace)
++- [ ] Run Ruff and mypy in developer environment (not downloadable in this workspace)
++
++**Stage 1 functional gate:** ✅ all local SQLite, schema, CLI and API tests pass.
++PostgreSQL and static-analysis gates remain explicitly pending; run the documented quality
++commands before committing and report any failures rather than assuming they passed.
+ 
+ ## Stage 2 — Official Source Registry and Seed Dataset
+ - [ ] Select ~20 Central Government schemes
+diff --git a/backend/.env.example b/backend/.env.example
+index 01d845f..4de1588 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -2,3 +2,4 @@ YOJANAMITRA_APP_NAME=YojanaMitra API
+ YOJANAMITRA_ENVIRONMENT=local
+ YOJANAMITRA_API_VERSION=v1
+ YOJANAMITRA_DEBUG=true
++YOJANAMITRA_DATABASE_URL=sqlite:///./yojanamitra.db
+diff --git a/backend/README.md b/backend/README.md
+index dad86aa..9098000 100644
+--- a/backend/README.md
++++ b/backend/README.md
+@@ -6,3 +6,16 @@ for setup, testing, and the staged delivery process.
+ Install with `python -m pip install -e ".[dev]"` from this directory. Run
+ `python -m pytest` here, or from the repository root; both invocations load
+ this checkout instead of an older installed `yojanamitra` package.
++
++
++Stage 1 adds typed domain contracts and Alembic-managed persistence. From `backend/`:
++
++```bash
++python -m alembic upgrade head
++python -m yojanamitra.cli seed-demo
++python -m uvicorn yojanamitra.main:app --reload
++```
++
++Test `GET http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme`.
++The fixture is **synthetic**, not a government scheme. Schema and migration tests use
++isolated SQLite databases; no PostgreSQL server is required at this stage.
+diff --git a/backend/alembic.ini b/backend/alembic.ini
+new file mode 100644
+index 0000000..68209bc
+--- /dev/null
++++ b/backend/alembic.ini
+@@ -0,0 +1,30 @@
++[alembic]
++script_location = %(here)s/migrations
++prepend_sys_path = %(here)s/src
++path_separator = os
++sqlalchemy.url = sqlite:///./yojanamitra.db
++
++[loggers]
++keys = root,sqlalchemy,alembic
++[handlers]
++keys = console
++[formatters]
++keys = generic
++[logger_root]
++level = WARN
++handlers = console
++[logger_sqlalchemy]
++level = WARN
++handlers =
++qualname = sqlalchemy.engine
++[logger_alembic]
++level = INFO
++handlers =
++qualname = alembic
++[handler_console]
++class = StreamHandler
++args = (sys.stderr,)
++level = NOTSET
++formatter = generic
++[formatter_generic]
++format = %(levelname)-5.5s [%(name)s] %(message)s
+diff --git a/backend/migrations/env.py b/backend/migrations/env.py
+new file mode 100644
+index 0000000..23b9f3c
+--- /dev/null
++++ b/backend/migrations/env.py
+@@ -0,0 +1,53 @@
++"""Run Alembic migrations against the configured Stage 1 database."""
++
++from logging.config import fileConfig
++
++from alembic import context
++from sqlalchemy import Connection, create_engine, pool
++
++import yojanamitra.models  # noqa: F401  # Register tables before autogeneration.
++from yojanamitra.core.config import get_settings
++from yojanamitra.db.base import Base
++
++config = context.config
++if config.config_file_name is not None:
++    fileConfig(config.config_file_name)
++
++target_metadata = Base.metadata
++
++
++def run_migrations_offline() -> None:
++    """Generate migrations without opening a database connection."""
++
++    context.configure(
++        url=get_settings().database_url,
++        target_metadata=target_metadata,
++        literal_binds=True,
++        dialect_opts={"paramstyle": "named"},
++    )
++    with context.begin_transaction():
++        context.run_migrations()
++
++
++def run_migrations_online() -> None:
++    """Apply migrations to a provided test connection or configured database."""
++
++    connection = config.attributes.get("connection")
++    if isinstance(connection, Connection):
++        context.configure(connection=connection, target_metadata=target_metadata)
++        with context.begin_transaction():
++            context.run_migrations()
++        return
++
++    engine = create_engine(get_settings().database_url, poolclass=pool.NullPool)
++    with engine.connect() as live_connection:
++        context.configure(connection=live_connection, target_metadata=target_metadata)
++        with context.begin_transaction():
++            context.run_migrations()
++    engine.dispose()
++
++
++if context.is_offline_mode():
++    run_migrations_offline()
++else:
++    run_migrations_online()
+diff --git a/backend/migrations/script.py.mako b/backend/migrations/script.py.mako
+new file mode 100644
+index 0000000..e110f73
+--- /dev/null
++++ b/backend/migrations/script.py.mako
+@@ -0,0 +1,26 @@
++"""${message}
++
++Revision ID: ${up_revision}
++Revises: ${down_revision | comma,n}
++Create Date: ${create_date}
++"""
++from collections.abc import Sequence
++
++from alembic import op
++import sqlalchemy as sa
++${imports if imports else ""}
++
++revision: str = ${repr(up_revision)}
++down_revision: str | None = ${repr(down_revision)}
++branch_labels: str | Sequence[str] | None = ${repr(branch_labels)}
++depends_on: str | Sequence[str] | None = ${repr(depends_on)}
++
++
++def upgrade() -> None:
++    """Apply this version's schema changes."""
++${upgrades if upgrades else "    pass"}
++
++
++def downgrade() -> None:
++    """Reverse this version's schema changes."""
++${downgrades if downgrades else "    pass"}
+diff --git a/backend/migrations/versions/3ce5b254da1a_stage1_structured_domain.py b/backend/migrations/versions/3ce5b254da1a_stage1_structured_domain.py
+new file mode 100644
+index 0000000..c2a6bc2
+--- /dev/null
++++ b/backend/migrations/versions/3ce5b254da1a_stage1_structured_domain.py
+@@ -0,0 +1,168 @@
++"""stage1 structured domain
++
++Revision ID: 3ce5b254da1a
++Revises:
++Create Date: 2026-09-24 18:00:02.770248
++"""
++from collections.abc import Sequence
++
++from alembic import op
++import sqlalchemy as sa
++
++
++revision: str = '3ce5b254da1a'
++down_revision: str | None = None
++branch_labels: str | Sequence[str] | None = None
++depends_on: str | Sequence[str] | None = None
++
++
++def upgrade() -> None:
++    """Apply this version's schema changes."""
++# ### commands auto generated by Alembic - please adjust! ###
++    op.create_table('schemes',
++    sa.Column('id', sa.String(length=80), nullable=False),
++    sa.Column('name', sa.String(length=250), nullable=False),
++    sa.Column('short_name', sa.String(length=80), nullable=True),
++    sa.Column('category', sa.String(length=80), nullable=False),
++    sa.Column('ministry', sa.String(length=180), nullable=True),
++    sa.Column('scope', sa.Enum('central', 'state', 'ut', name='schemescope', native_enum=False, create_constraint=True), nullable=False),
++    sa.Column('state_code', sa.String(length=2), nullable=True),
++    sa.Column('status', sa.Enum('unknown', 'active', 'paused', 'closed', name='schemestatus', native_enum=False, create_constraint=True), nullable=False),
++    sa.Column('last_verified_at', sa.DateTime(timezone=True), nullable=True),
++    sa.Column('metadata', sa.JSON(), nullable=False),
++    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
++    sa.CheckConstraint("(scope = 'central' AND state_code IS NULL) OR (scope IN ('state', 'ut') AND state_code IS NOT NULL)", name=op.f('ck_schemes_scope_matches_state_code')),
++    sa.PrimaryKeyConstraint('id', name=op.f('pk_schemes'))
++    )
++    op.create_table('user_profiles',
++    sa.Column('id', sa.Uuid(), nullable=False),
++    sa.Column('session_id', sa.Uuid(), nullable=False),
++    sa.Column('age', sa.Integer(), nullable=True),
++    sa.Column('beneficiary_age', sa.Integer(), nullable=True),
++    sa.Column('beneficiary_relationship', sa.String(length=60), nullable=True),
++    sa.Column('gender', sa.String(length=40), nullable=True),
++    sa.Column('state_code', sa.String(length=2), nullable=True),
++    sa.Column('district', sa.String(length=100), nullable=True),
++    sa.Column('annual_family_income', sa.Numeric(precision=14, scale=2), nullable=True),
++    sa.Column('income_band', sa.String(length=60), nullable=True),
++    sa.Column('occupation', sa.String(length=100), nullable=True),
++    sa.Column('employment_status', sa.String(length=60), nullable=True),
++    sa.Column('is_student', sa.Boolean(), nullable=True),
++    sa.Column('education_level', sa.String(length=80), nullable=True),
++    sa.Column('is_farmer', sa.Boolean(), nullable=True),
++    sa.Column('landholding_acres', sa.Numeric(precision=10, scale=3), nullable=True),
++    sa.Column('residence_type', sa.String(length=20), nullable=True),
++    sa.Column('disability_status', sa.String(length=60), nullable=True),
++    sa.Column('scheme_interests', sa.JSON(), nullable=False),
++    sa.Column('missing_fields', sa.JSON(), nullable=False),
++    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
++    sa.CheckConstraint('age IS NULL OR (age >= 0 AND age <= 120)', name=op.f('ck_user_profiles_valid_age')),
++    sa.CheckConstraint('annual_family_income IS NULL OR annual_family_income >= 0', name=op.f('ck_user_profiles_nonnegative_income')),
++    sa.CheckConstraint('beneficiary_age IS NULL OR (beneficiary_age >= 0 AND beneficiary_age <= 120)', name=op.f('ck_user_profiles_valid_beneficiary_age')),
++    sa.CheckConstraint('landholding_acres IS NULL OR landholding_acres >= 0', name=op.f('ck_user_profiles_nonnegative_land')),
++    sa.PrimaryKeyConstraint('id', name=op.f('pk_user_profiles')),
++    sa.UniqueConstraint('session_id', name=op.f('uq_user_profiles_session_id'))
++    )
++    op.create_table('sources',
++    sa.Column('id', sa.Uuid(), nullable=False),
++    sa.Column('scheme_id', sa.String(length=80), nullable=False),
++    sa.Column('title', sa.String(length=250), nullable=False),
++    sa.Column('url', sa.String(length=2048), nullable=False),
++    sa.Column('authority', sa.String(length=200), nullable=False),
++    sa.Column('source_type', sa.Enum('guideline', 'notification', 'gazette', 'ministry_page', 'official_api', 'government_aggregator', 'press_release', 'other', name='sourcetype', native_enum=False, create_constraint=True), nullable=False),
++    sa.Column('tier', sa.Enum('tier_1', 'tier_2', 'tier_3', name='sourcetier', native_enum=False, create_constraint=True), nullable=False),
++    sa.Column('authority_score', sa.Integer(), nullable=False),
++    sa.Column('is_official', sa.Boolean(), nullable=False),
++    sa.Column('last_verified_at', sa.DateTime(timezone=True), nullable=True),
++    sa.Column('metadata', sa.JSON(), nullable=False),
++    sa.CheckConstraint('authority_score >= 0 AND authority_score <= 100', name=op.f('ck_sources_authority_score_range')),
++    sa.ForeignKeyConstraint(['scheme_id'], ['schemes.id'], name=op.f('fk_sources_scheme_id_schemes'), ondelete='CASCADE'),
++    sa.PrimaryKeyConstraint('id', name=op.f('pk_sources'))
++    )
++    op.create_index(op.f('ix_sources_scheme_id'), 'sources', ['scheme_id'], unique=False)
++    op.create_table('documents',
++    sa.Column('id', sa.Uuid(), nullable=False),
++    sa.Column('source_id', sa.Uuid(), nullable=False),
++    sa.Column('title', sa.String(length=250), nullable=False),
++    sa.Column('source_url', sa.String(length=2048), nullable=False),
++    sa.Column('content_hash', sa.String(length=64), nullable=False),
++    sa.Column('mime_type', sa.String(length=120), nullable=False),
++    sa.Column('storage_uri', sa.String(length=2048), nullable=True),
++    sa.Column('version_label', sa.String(length=80), nullable=False),
++    sa.Column('status', sa.Enum('unverified', 'current', 'superseded', name='documentstatus', native_enum=False, create_constraint=True), nullable=False),
++    sa.Column('downloaded_at', sa.DateTime(timezone=True), nullable=True),
++    sa.Column('published_at', sa.Date(), nullable=True),
++    sa.Column('effective_from', sa.Date(), nullable=True),
++    sa.Column('effective_to', sa.Date(), nullable=True),
++    sa.Column('page_count', sa.Integer(), nullable=True),
++    sa.Column('language', sa.String(length=10), nullable=False),
++    sa.Column('metadata', sa.JSON(), nullable=False),
++    sa.CheckConstraint('effective_from IS NULL OR effective_to IS NULL OR effective_from <= effective_to', name=op.f('ck_documents_valid_effective_window')),
++    sa.CheckConstraint('page_count IS NULL OR page_count >= 0', name=op.f('ck_documents_page_count_nonnegative')),
++    sa.ForeignKeyConstraint(['source_id'], ['sources.id'], name=op.f('fk_documents_source_id_sources'), ondelete='CASCADE'),
++    sa.PrimaryKeyConstraint('id', name=op.f('pk_documents'))
++    )
++    op.create_index(op.f('ix_documents_content_hash'), 'documents', ['content_hash'], unique=False)
++    op.create_index(op.f('ix_documents_source_id'), 'documents', ['source_id'], unique=False)
++    op.create_table('eligibility_rules',
++    sa.Column('id', sa.Uuid(), nullable=False),
++    sa.Column('scheme_id', sa.String(length=80), nullable=False),
++    sa.Column('parent_rule_id', sa.Uuid(), nullable=True),
++    sa.Column('source_id', sa.Uuid(), nullable=True),
++    sa.Column('kind', sa.Enum('group', 'condition', name='rulekind', native_enum=False, create_constraint=True), nullable=False),
++    sa.Column('group_operator', sa.Enum('all', 'any', name='groupoperator', native_enum=False, create_constraint=True), nullable=True),
++    sa.Column('profile_field', sa.Enum('age', 'beneficiary_age', 'beneficiary_relationship', 'gender', 'state_code', 'district', 'annual_family_income', 'income_band', 'occupation', 'employment_status', 'is_student', 'education_level', 'is_farmer', 'landholding_acres', 'residence_type', 'disability_status', name='profilefield', native_enum=False, create_constraint=True), nullable=True),
++    sa.Column('comparison_operator', sa.Enum('eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'between', 'contains', 'exists', name='comparisonoperator', native_enum=False, create_constraint=True), nullable=True),
++    sa.Column('expected_value', sa.JSON(none_as_null=True), nullable=True),
++    sa.Column('priority', sa.Integer(), nullable=False),
++    sa.Column('rule_version', sa.String(length=80), nullable=True),
++    sa.Column('machine_verified', sa.Boolean(), nullable=False),
++    sa.CheckConstraint("(kind = 'group' AND group_operator IS NOT NULL AND profile_field IS NULL AND comparison_operator IS NULL AND expected_value IS NULL) OR (kind = 'condition' AND group_operator IS NULL AND profile_field IS NOT NULL AND comparison_operator IS NOT NULL)", name=op.f('ck_eligibility_rules_valid_rule_shape')),
++    sa.CheckConstraint('priority >= 0', name=op.f('ck_eligibility_rules_nonnegative_priority')),
++    sa.ForeignKeyConstraint(['parent_rule_id'], ['eligibility_rules.id'], name=op.f('fk_eligibility_rules_parent_rule_id_eligibility_rules'), ondelete='CASCADE'),
++    sa.ForeignKeyConstraint(['scheme_id'], ['schemes.id'], name=op.f('fk_eligibility_rules_scheme_id_schemes'), ondelete='CASCADE'),
++    sa.ForeignKeyConstraint(['source_id'], ['sources.id'], name=op.f('fk_eligibility_rules_source_id_sources'), ondelete='SET NULL'),
++    sa.PrimaryKeyConstraint('id', name=op.f('pk_eligibility_rules'))
++    )
++    op.create_index(op.f('ix_eligibility_rules_parent_rule_id'), 'eligibility_rules', ['parent_rule_id'], unique=False)
++    op.create_index(op.f('ix_eligibility_rules_scheme_id'), 'eligibility_rules', ['scheme_id'], unique=False)
++    op.create_table('chunks',
++    sa.Column('id', sa.Uuid(), nullable=False),
++    sa.Column('document_id', sa.Uuid(), nullable=False),
++    sa.Column('chunk_index', sa.Integer(), nullable=False),
++    sa.Column('text', sa.Text(), nullable=False),
++    sa.Column('heading', sa.String(length=250), nullable=True),
++    sa.Column('section', sa.String(length=100), nullable=True),
++    sa.Column('heading_path', sa.JSON(), nullable=False),
++    sa.Column('page_start', sa.Integer(), nullable=True),
++    sa.Column('page_end', sa.Integer(), nullable=True),
++    sa.Column('token_count', sa.Integer(), nullable=True),
++    sa.Column('content_hash', sa.String(length=64), nullable=True),
++    sa.Column('metadata', sa.JSON(), nullable=False),
++    sa.CheckConstraint('chunk_index >= 0', name=op.f('ck_chunks_chunk_index_nonnegative')),
++    sa.CheckConstraint('page_start IS NULL OR page_end IS NULL OR page_start <= page_end', name=op.f('ck_chunks_valid_page_range')),
++    sa.CheckConstraint('token_count IS NULL OR token_count >= 0', name=op.f('ck_chunks_token_count_nonnegative')),
++    sa.ForeignKeyConstraint(['document_id'], ['documents.id'], name=op.f('fk_chunks_document_id_documents'), ondelete='CASCADE'),
++    sa.PrimaryKeyConstraint('id', name=op.f('pk_chunks')),
++    sa.UniqueConstraint('document_id', 'chunk_index', name='uq_document_chunk_index')
++    )
++    op.create_index(op.f('ix_chunks_document_id'), 'chunks', ['document_id'], unique=False)
++    # ### end Alembic commands ###
++
++
++def downgrade() -> None:
++    """Reverse this version's schema changes."""
++# ### commands auto generated by Alembic - please adjust! ###
++    op.drop_index(op.f('ix_chunks_document_id'), table_name='chunks')
++    op.drop_table('chunks')
++    op.drop_index(op.f('ix_eligibility_rules_scheme_id'), table_name='eligibility_rules')
++    op.drop_index(op.f('ix_eligibility_rules_parent_rule_id'), table_name='eligibility_rules')
++    op.drop_table('eligibility_rules')
++    op.drop_index(op.f('ix_documents_source_id'), table_name='documents')
++    op.drop_index(op.f('ix_documents_content_hash'), table_name='documents')
++    op.drop_table('documents')
++    op.drop_index(op.f('ix_sources_scheme_id'), table_name='sources')
++    op.drop_table('sources')
++    op.drop_table('user_profiles')
++    op.drop_table('schemes')
++    # ### end Alembic commands ###
+diff --git a/backend/pyproject.toml b/backend/pyproject.toml
+index 2e7677c..16d564c 100644
+--- a/backend/pyproject.toml
++++ b/backend/pyproject.toml
+@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
+ 
+ [project]
+ name = "yojanamitra-backend"
+-version = "0.0.1"
++version = "0.1.0"
+ description = "Backend API and AI services for YojanaMitra"
+ readme = "README.md"
+ requires-python = ">=3.11"
+@@ -14,9 +14,12 @@ dependencies = [
+     "pydantic>=2.9,<3.0",
+     "pydantic-settings>=2.5,<3.0",
+     "uvicorn[standard]>=0.30,<1.0",
++    "sqlalchemy>=2.0,<3.0",
++    "alembic>=1.13,<2.0",
+ ]
+ 
+ [project.optional-dependencies]
++postgres = ["psycopg[binary]>=3.2,<4.0"]
+ dev = [
+     "httpx>=0.27,<1.0",
+     "mypy>=1.11,<2.0",
+@@ -37,6 +40,8 @@ testpaths = ["tests"]
+ target-version = "py311"
+ line-length = 100
+ src = ["src", "tests"]
++# Alembic autogenerates revision files; their schema is tested through upgrade/downgrade.
++extend-exclude = ["migrations/versions/*.py"]
+ 
+ [tool.ruff.lint]
+ select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+diff --git a/backend/src/yojanamitra/api/router.py b/backend/src/yojanamitra/api/router.py
+index 85633a1..266a3d6 100644
+--- a/backend/src/yojanamitra/api/router.py
++++ b/backend/src/yojanamitra/api/router.py
+@@ -3,6 +3,8 @@
+ from fastapi import APIRouter
+ 
+ from yojanamitra.api.routes.health import router as health_router
++from yojanamitra.api.routes.schemes import router as schemes_router
+ 
+ api_router = APIRouter()
+ api_router.include_router(health_router)
++api_router.include_router(schemes_router)
+diff --git a/backend/src/yojanamitra/api/routes/__init__.py b/backend/src/yojanamitra/api/routes/__init__.py
+index 7595942..fe5e50d 100644
+--- a/backend/src/yojanamitra/api/routes/__init__.py
++++ b/backend/src/yojanamitra/api/routes/__init__.py
+@@ -1 +1 @@
+-"""FastAPI route modules."""
++"""HTTP routes for independent domain and health services."""
+diff --git a/backend/src/yojanamitra/api/routes/schemes.py b/backend/src/yojanamitra/api/routes/schemes.py
+new file mode 100644
+index 0000000..5c18fc5
+--- /dev/null
++++ b/backend/src/yojanamitra/api/routes/schemes.py
+@@ -0,0 +1,23 @@
++"""Read-only Stage 1 scheme endpoint backed by the registered domain model."""
++
++from typing import Annotated
++
++from fastapi import APIRouter, Depends, HTTPException
++from sqlalchemy.orm import Session
++
++from yojanamitra.db.session import get_db_session
++from yojanamitra.repositories.schemes import get_scheme_by_id
++from yojanamitra.schemas.domain import SchemeRead, Slug
++
++router = APIRouter(prefix="/schemes", tags=["schemes"])
++DatabaseSession = Annotated[Session, Depends(get_db_session)]
++
++
++@router.get("/{scheme_id}", response_model=SchemeRead, summary="Get structured scheme metadata")
++def read_scheme(scheme_id: Slug, session: DatabaseSession) -> SchemeRead:
++    """Return a stored scheme and registered source metadata, or an HTTP 404."""
++
++    scheme = get_scheme_by_id(session, scheme_id)
++    if scheme is None:
++        raise HTTPException(status_code=404, detail="Scheme not found")
++    return SchemeRead.model_validate(scheme)
+diff --git a/backend/src/yojanamitra/cli.py b/backend/src/yojanamitra/cli.py
+new file mode 100644
+index 0000000..abb041d
+--- /dev/null
++++ b/backend/src/yojanamitra/cli.py
+@@ -0,0 +1,76 @@
++"""Small, explicit local demo-data command for Stage 1 verification."""
++
++import argparse
++import uuid
++
++from sqlalchemy.orm import Session
++
++from yojanamitra.core.config import get_settings
++from yojanamitra.db.session import get_engine
++from yojanamitra.models import Scheme, Source
++from yojanamitra.models.enums import SchemeScope, SourceTier, SourceType
++from yojanamitra.repositories.schemes import add_scheme, add_source, get_scheme_by_id
++from yojanamitra.schemas.domain import SchemeCreate, SourceCreate
++
++DEMO_SCHEME_ID = "stage1-demo-scheme"
++DEMO_SOURCE_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
++
++
++def seed_demo() -> None:
++    """Insert one unmistakably synthetic scheme for local read-only API testing."""
++
++    settings = get_settings()
++    # A synthetic record must never accidentally be added to a public government dataset.
++    if settings.environment != "local" or not settings.database_url.startswith("sqlite"):
++        raise RuntimeError("Demo seeding is allowed only with local SQLite configuration")
++
++    scheme_data = SchemeCreate(
++        id=DEMO_SCHEME_ID,
++        name="Stage 1 Synthetic Test Scheme — NOT A GOVERNMENT SCHEME",
++        category="test_only",
++        scope=SchemeScope.CENTRAL,
++        metadata={"demo_only": True},
++    )
++    source_data = SourceCreate(
++        scheme_id=DEMO_SCHEME_ID,
++        title="Synthetic Stage 1 test reference — NOT AN OFFICIAL SOURCE",
++        url="https://example.org/yojanamitra/stage1-demo",
++        authority="YojanaMitra local tests",
++        source_type=SourceType.OTHER,
++        tier=SourceTier.CONTEXT_ONLY,
++    )
++    with Session(get_engine()) as session, session.begin():
++        if get_scheme_by_id(session, DEMO_SCHEME_ID) is not None:
++            print("Demo already exists; no changes made.")
++            return
++        add_scheme(
++            session,
++            Scheme(
++                **scheme_data.model_dump(exclude={"metadata"}),
++                extra_metadata=scheme_data.metadata,
++            ),
++        )
++        add_source(
++            session,
++            Source(
++                id=DEMO_SOURCE_ID,
++                **source_data.model_dump(exclude={"metadata", "url"}),
++                url=str(source_data.url),
++                extra_metadata=source_data.metadata,
++            ),
++        )
++    print(f"Seeded synthetic demo only: {DEMO_SCHEME_ID}")
++
++
++def main() -> None:
++    """Parse the narrow Stage 1 demo command and execute it."""
++
++    parser = argparse.ArgumentParser(description="Stage 1 local data helper")
++    parser.add_argument("action", choices=["seed-demo"])
++    args = parser.parse_args()
++    if args.action == "seed-demo":
++        seed_demo()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/backend/src/yojanamitra/core/config.py b/backend/src/yojanamitra/core/config.py
+index 23afcbb..f22ec07 100644
+--- a/backend/src/yojanamitra/core/config.py
++++ b/backend/src/yojanamitra/core/config.py
+@@ -19,6 +19,8 @@ class Settings(BaseSettings):
+     environment: Literal["local", "test", "development", "staging", "production"] = "local"
+     api_version: str = "v1"
+     debug: bool = False
++    # Local SQLite keeps this stage testable without a database server.
++    database_url: str = "sqlite:///./yojanamitra.db"
+ 
+ 
+ @lru_cache
+diff --git a/backend/src/yojanamitra/db/__init__.py b/backend/src/yojanamitra/db/__init__.py
+new file mode 100644
+index 0000000..cf1ae8b
+--- /dev/null
++++ b/backend/src/yojanamitra/db/__init__.py
+@@ -0,0 +1 @@
++"""Database connection and metadata boundary."""
+diff --git a/backend/src/yojanamitra/db/base.py b/backend/src/yojanamitra/db/base.py
+new file mode 100644
+index 0000000..354de84
+--- /dev/null
++++ b/backend/src/yojanamitra/db/base.py
+@@ -0,0 +1,18 @@
++"""Declarative ORM base with predictable database constraint names."""
++
++from sqlalchemy import MetaData
++from sqlalchemy.orm import DeclarativeBase
++
++NAMING_CONVENTION = {
++    "ix": "ix_%(column_0_label)s",
++    "uq": "uq_%(table_name)s_%(column_0_name)s",
++    "ck": "ck_%(table_name)s_%(constraint_name)s",
++    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
++    "pk": "pk_%(table_name)s",
++}
++
++
++class Base(DeclarativeBase):
++    """Provide the common SQLAlchemy metadata for all domain entities."""
++
++    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+diff --git a/backend/src/yojanamitra/db/session.py b/backend/src/yojanamitra/db/session.py
+new file mode 100644
+index 0000000..8e14a68
+--- /dev/null
++++ b/backend/src/yojanamitra/db/session.py
+@@ -0,0 +1,42 @@
++"""Construct database connections and yield short-lived request sessions."""
++
++from collections.abc import Iterator
++from functools import lru_cache
++
++from sqlalchemy import Engine, create_engine, event
++from sqlalchemy.orm import Session, sessionmaker
++
++from yojanamitra.core.config import get_settings
++
++
++def create_database_engine(database_url: str) -> Engine:
++    """Create one SQLAlchemy engine and enable SQLite foreign-key checks."""
++
++    engine = create_engine(database_url, pool_pre_ping=True)
++    if engine.dialect.name == "sqlite":
++
++        @event.listens_for(engine, "connect")
++        def enable_foreign_keys(connection: object, connection_record: object) -> None:
++            """Enable SQLite referential integrity for every new connection."""
++
++            # SQLite does not enforce FK constraints unless explicitly enabled.
++            cursor = connection.cursor()  # type: ignore[attr-defined]
++            cursor.execute("PRAGMA foreign_keys=ON")
++            cursor.close()
++
++    return engine
++
++
++@lru_cache
++def get_engine() -> Engine:
++    """Reuse the configured engine instead of rebuilding its pool per request."""
++
++    return create_database_engine(get_settings().database_url)
++
++
++def get_db_session() -> Iterator[Session]:
++    """Yield a request-scoped session and always release its connection."""
++
++    session_factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
++    with session_factory() as session:
++        yield session
+diff --git a/backend/src/yojanamitra/main.py b/backend/src/yojanamitra/main.py
+index d67d198..bbb504f 100644
+--- a/backend/src/yojanamitra/main.py
++++ b/backend/src/yojanamitra/main.py
+@@ -12,7 +12,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
+     resolved_settings = settings or get_settings()
+     application = FastAPI(
+         title=resolved_settings.app_name,
+-        version="0.0.1",
++        version="0.1.0",
+         debug=resolved_settings.debug,
+     )
+     application.state.settings = resolved_settings
+diff --git a/backend/src/yojanamitra/models/__init__.py b/backend/src/yojanamitra/models/__init__.py
+new file mode 100644
+index 0000000..830956b
+--- /dev/null
++++ b/backend/src/yojanamitra/models/__init__.py
+@@ -0,0 +1,10 @@
++"""Import all ORM models once so metadata and relationships are registered."""
++
++from yojanamitra.models.chunk import Chunk
++from yojanamitra.models.document import Document
++from yojanamitra.models.eligibility_rule import EligibilityRule
++from yojanamitra.models.scheme import Scheme
++from yojanamitra.models.source import Source
++from yojanamitra.models.user_profile import UserProfile
++
++__all__ = ["Scheme", "Source", "EligibilityRule", "Document", "Chunk", "UserProfile"]
+diff --git a/backend/src/yojanamitra/models/chunk.py b/backend/src/yojanamitra/models/chunk.py
+new file mode 100644
+index 0000000..2d7583c
+--- /dev/null
++++ b/backend/src/yojanamitra/models/chunk.py
+@@ -0,0 +1,46 @@
++"""Text spans and citation coordinates for future retrieval."""
++
++from __future__ import annotations
++
++import uuid
++from typing import TYPE_CHECKING
++
++from sqlalchemy import CheckConstraint, ForeignKey, JSON, String, Text, UniqueConstraint, Uuid
++from sqlalchemy.orm import Mapped, mapped_column, relationship
++
++from yojanamitra.db.base import Base
++
++if TYPE_CHECKING:
++    from yojanamitra.models.document import Document
++
++
++class Chunk(Base):
++    """Store a document segment with its section and page provenance."""
++
++    __tablename__ = "chunks"
++    __table_args__ = (
++        UniqueConstraint("document_id", "chunk_index", name="uq_document_chunk_index"),
++        CheckConstraint("chunk_index >= 0", name="chunk_index_nonnegative"),
++        CheckConstraint("token_count IS NULL OR token_count >= 0", name="token_count_nonnegative"),
++        CheckConstraint(
++            "page_start IS NULL OR page_end IS NULL OR page_start <= page_end",
++            name="valid_page_range",
++        ),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    document_id: Mapped[uuid.UUID] = mapped_column(
++        ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
++    )
++    chunk_index: Mapped[int]
++    text: Mapped[str] = mapped_column(Text, nullable=False)
++    heading: Mapped[str | None] = mapped_column(String(250))
++    section: Mapped[str | None] = mapped_column(String(100))
++    heading_path: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
++    page_start: Mapped[int | None]
++    page_end: Mapped[int | None]
++    token_count: Mapped[int | None]
++    content_hash: Mapped[str | None] = mapped_column(String(64))
++    extra_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict, nullable=False)
++
++    document: Mapped[Document] = relationship(back_populates="chunks")
+diff --git a/backend/src/yojanamitra/models/document.py b/backend/src/yojanamitra/models/document.py
+new file mode 100644
+index 0000000..767352c
+--- /dev/null
++++ b/backend/src/yojanamitra/models/document.py
+@@ -0,0 +1,69 @@
++"""Versioned downloaded-document metadata for future ingestion."""
++
++from __future__ import annotations
++
++import uuid
++from datetime import date, datetime
++from typing import TYPE_CHECKING
++
++from sqlalchemy import (
++    CheckConstraint,
++    Date,
++    DateTime,
++    Enum as SAEnum,
++    ForeignKey,
++    JSON,
++    String,
++    Uuid,
++)
++from sqlalchemy.orm import Mapped, mapped_column, relationship
++
++from yojanamitra.db.base import Base
++from yojanamitra.models.enums import DocumentStatus, enum_values
++
++if TYPE_CHECKING:
++    from yojanamitra.models.chunk import Chunk
++    from yojanamitra.models.source import Source
++
++
++class Document(Base):
++    """Describe one immutable content version associated with a source."""
++
++    __tablename__ = "documents"
++    __table_args__ = (
++        CheckConstraint("page_count IS NULL OR page_count >= 0", name="page_count_nonnegative"),
++        CheckConstraint(
++            "effective_from IS NULL OR effective_to IS NULL OR effective_from <= effective_to",
++            name="valid_effective_window",
++        ),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    source_id: Mapped[uuid.UUID] = mapped_column(
++        ForeignKey("sources.id", ondelete="CASCADE"), nullable=False, index=True
++    )
++    title: Mapped[str] = mapped_column(String(250), nullable=False)
++    source_url: Mapped[str] = mapped_column(String(2048), nullable=False)
++    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
++    mime_type: Mapped[str] = mapped_column(String(120), nullable=False)
++    storage_uri: Mapped[str | None] = mapped_column(String(2048))
++    version_label: Mapped[str] = mapped_column(String(80), nullable=False)
++    status: Mapped[DocumentStatus] = mapped_column(
++        SAEnum(
++            DocumentStatus, values_callable=enum_values, native_enum=False, create_constraint=True
++        ),
++        default=DocumentStatus.UNVERIFIED,
++        nullable=False,
++    )
++    downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
++    published_at: Mapped[date | None] = mapped_column(Date)
++    effective_from: Mapped[date | None] = mapped_column(Date)
++    effective_to: Mapped[date | None] = mapped_column(Date)
++    page_count: Mapped[int | None]
++    language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
++    extra_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict, nullable=False)
++
++    source: Mapped[Source] = relationship(back_populates="documents")
++    chunks: Mapped[list[Chunk]] = relationship(
++        back_populates="document", cascade="all, delete-orphan"
++    )
+diff --git a/backend/src/yojanamitra/models/eligibility_rule.py b/backend/src/yojanamitra/models/eligibility_rule.py
+new file mode 100644
+index 0000000..419fb6b
+--- /dev/null
++++ b/backend/src/yojanamitra/models/eligibility_rule.py
+@@ -0,0 +1,81 @@
++"""Version-aware nested eligibility definitions; no evaluation logic yet."""
++
++from __future__ import annotations
++
++import uuid
++from typing import TYPE_CHECKING
++
++from sqlalchemy import Boolean, CheckConstraint, Enum as SAEnum, ForeignKey, JSON, String, Uuid
++from sqlalchemy.orm import Mapped, mapped_column, relationship
++
++from yojanamitra.db.base import Base
++from yojanamitra.models.enums import (
++    ComparisonOperator,
++    GroupOperator,
++    ProfileField,
++    RuleKind,
++    enum_values,
++)
++
++if TYPE_CHECKING:
++    from yojanamitra.models.scheme import Scheme
++    from yojanamitra.models.source import Source
++
++
++class EligibilityRule(Base):
++    """Store a group or condition in a scheme-specific eligibility tree."""
++
++    __tablename__ = "eligibility_rules"
++    __table_args__ = (
++        CheckConstraint(
++            "(kind = 'group' AND group_operator IS NOT NULL AND profile_field IS NULL "
++            "AND comparison_operator IS NULL AND expected_value IS NULL) OR "
++            "(kind = 'condition' AND group_operator IS NULL AND profile_field IS NOT NULL "
++            "AND comparison_operator IS NOT NULL)",
++            name="valid_rule_shape",
++        ),
++        CheckConstraint("priority >= 0", name="nonnegative_priority"),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    scheme_id: Mapped[str] = mapped_column(
++        ForeignKey("schemes.id", ondelete="CASCADE"), nullable=False, index=True
++    )
++    parent_rule_id: Mapped[uuid.UUID | None] = mapped_column(
++        ForeignKey("eligibility_rules.id", ondelete="CASCADE"), index=True
++    )
++    source_id: Mapped[uuid.UUID | None] = mapped_column(
++        ForeignKey("sources.id", ondelete="SET NULL")
++    )
++    kind: Mapped[RuleKind] = mapped_column(
++        SAEnum(RuleKind, values_callable=enum_values, native_enum=False, create_constraint=True),
++        nullable=False,
++    )
++    group_operator: Mapped[GroupOperator | None] = mapped_column(
++        SAEnum(
++            GroupOperator, values_callable=enum_values, native_enum=False, create_constraint=True
++        )
++    )
++    profile_field: Mapped[ProfileField | None] = mapped_column(
++        SAEnum(ProfileField, values_callable=enum_values, native_enum=False, create_constraint=True)
++    )
++    comparison_operator: Mapped[ComparisonOperator | None] = mapped_column(
++        SAEnum(
++            ComparisonOperator,
++            values_callable=enum_values,
++            native_enum=False,
++            create_constraint=True
++        )
++    )
++    expected_value: Mapped[object | None] = mapped_column(JSON(none_as_null=True))
++    priority: Mapped[int] = mapped_column(default=0, nullable=False)
++    rule_version: Mapped[str | None] = mapped_column(String(80))
++    # Machine-verification is a human-reviewed claim, never inferred from creating a rule.
++    machine_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
++
++    scheme: Mapped[Scheme] = relationship(back_populates="eligibility_rules")
++    source: Mapped[Source | None] = relationship(back_populates="eligibility_rules")
++    parent: Mapped[EligibilityRule | None] = relationship(
++        back_populates="children", remote_side="EligibilityRule.id"
++    )
++    children: Mapped[list[EligibilityRule]] = relationship(back_populates="parent")
+diff --git a/backend/src/yojanamitra/models/enums.py b/backend/src/yojanamitra/models/enums.py
+new file mode 100644
+index 0000000..a6f5857
+--- /dev/null
++++ b/backend/src/yojanamitra/models/enums.py
+@@ -0,0 +1,106 @@
++"""Stable domain vocabularies shared by persistence and API validation."""
++
++from enum import Enum
++
++
++class SchemeScope(str, Enum):
++    """Identify the jurisdiction responsible for a scheme."""
++
++    CENTRAL = "central"
++    STATE = "state"
++    UT = "ut"
++
++
++class SchemeStatus(str, Enum):
++    """Represent a scheme's evidence-backed operational status."""
++
++    UNKNOWN = "unknown"
++    ACTIVE = "active"
++    PAUSED = "paused"
++    CLOSED = "closed"
++
++
++class SourceTier(str, Enum):
++    """Distinguish primary authorities from discovery and contextual sources."""
++
++    PRIMARY = "tier_1"
++    GOVERNMENT_AGGREGATOR = "tier_2"
++    CONTEXT_ONLY = "tier_3"
++
++
++class SourceType(str, Enum):
++    """Describe the kind of government source or related reference."""
++
++    GUIDELINE = "guideline"
++    NOTIFICATION = "notification"
++    GAZETTE = "gazette"
++    MINISTRY_PAGE = "ministry_page"
++    OFFICIAL_API = "official_api"
++    GOVERNMENT_AGGREGATOR = "government_aggregator"
++    PRESS_RELEASE = "press_release"
++    OTHER = "other"
++
++
++class RuleKind(str, Enum):
++    """Distinguish a Boolean rule group from a leaf condition."""
++
++    GROUP = "group"
++    CONDITION = "condition"
++
++
++class GroupOperator(str, Enum):
++    """Describe how a nested group combines child rule results."""
++
++    ALL = "all"
++    ANY = "any"
++
++
++class ComparisonOperator(str, Enum):
++    """Declare the operators Stage 8's deterministic engine will implement."""
++
++    EQ = "eq"
++    NE = "ne"
++    GT = "gt"
++    GTE = "gte"
++    LT = "lt"
++    LTE = "lte"
++    IN = "in"
++    NOT_IN = "not_in"
++    BETWEEN = "between"
++    CONTAINS = "contains"
++    EXISTS = "exists"
++
++
++class ProfileField(str, Enum):
++    """Limit rule field references to known, consent-appropriate profile data."""
++
++    AGE = "age"
++    BENEFICIARY_AGE = "beneficiary_age"
++    BENEFICIARY_RELATIONSHIP = "beneficiary_relationship"
++    GENDER = "gender"
++    STATE_CODE = "state_code"
++    DISTRICT = "district"
++    ANNUAL_FAMILY_INCOME = "annual_family_income"
++    INCOME_BAND = "income_band"
++    OCCUPATION = "occupation"
++    EMPLOYMENT_STATUS = "employment_status"
++    IS_STUDENT = "is_student"
++    EDUCATION_LEVEL = "education_level"
++    IS_FARMER = "is_farmer"
++    LANDHOLDING_ACRES = "landholding_acres"
++    RESIDENCE_TYPE = "residence_type"
++    DISABILITY_STATUS = "disability_status"
++
++
++class DocumentStatus(str, Enum):
++    """Differentiate draft/current source versions from historical copies."""
++
++    UNVERIFIED = "unverified"
++    CURRENT = "current"
++    SUPERSEDED = "superseded"
++
++
++def enum_values(enum_type: type[Enum]) -> list[str]:
++    """Return enum values so database storage matches public JSON contracts."""
++
++    return [str(member.value) for member in enum_type]
+diff --git a/backend/src/yojanamitra/models/scheme.py b/backend/src/yojanamitra/models/scheme.py
+new file mode 100644
+index 0000000..d3b878a
+--- /dev/null
++++ b/backend/src/yojanamitra/models/scheme.py
+@@ -0,0 +1,61 @@
++"""Structured scheme metadata independent of government source documents."""
++
++from __future__ import annotations
++
++from datetime import datetime, timezone
++from typing import TYPE_CHECKING
++
++from sqlalchemy import CheckConstraint, DateTime, Enum as SAEnum, JSON, String
++from sqlalchemy.orm import Mapped, mapped_column, relationship
++
++from yojanamitra.db.base import Base
++from yojanamitra.models.enums import SchemeScope, SchemeStatus, enum_values
++
++if TYPE_CHECKING:
++    from yojanamitra.models.eligibility_rule import EligibilityRule
++    from yojanamitra.models.source import Source
++
++
++class Scheme(Base):
++    """Store a scheme's identity, jurisdiction, provenance and status."""
++
++    __tablename__ = "schemes"
++    __table_args__ = (
++        CheckConstraint(
++            "(scope = 'central' AND state_code IS NULL) OR "
++            "(scope IN ('state', 'ut') AND state_code IS NOT NULL)",
++            name="scope_matches_state_code",
++        ),
++    )
++
++    id: Mapped[str] = mapped_column(String(80), primary_key=True)
++    name: Mapped[str] = mapped_column(String(250), nullable=False)
++    short_name: Mapped[str | None] = mapped_column(String(80))
++    category: Mapped[str] = mapped_column(String(80), nullable=False)
++    ministry: Mapped[str | None] = mapped_column(String(180))
++    scope: Mapped[SchemeScope] = mapped_column(
++        SAEnum(SchemeScope, values_callable=enum_values, native_enum=False, create_constraint=True),
++        default=SchemeScope.CENTRAL,
++        nullable=False,
++    )
++    state_code: Mapped[str | None] = mapped_column(String(2))
++    status: Mapped[SchemeStatus] = mapped_column(
++        SAEnum(
++            SchemeStatus, values_callable=enum_values, native_enum=False, create_constraint=True
++        ),
++        default=SchemeStatus.UNKNOWN,
++        nullable=False,
++    )
++    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
++    # 'metadata' is a reserved SQLAlchemy attribute; the DB column retains the domain name.
++    extra_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict, nullable=False)
++    created_at: Mapped[datetime] = mapped_column(
++        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
++    )
++
++    sources: Mapped[list[Source]] = relationship(
++        back_populates="scheme", cascade="all, delete-orphan"
++    )
++    eligibility_rules: Mapped[list[EligibilityRule]] = relationship(
++        back_populates="scheme", cascade="all, delete-orphan"
++    )
+diff --git a/backend/src/yojanamitra/models/source.py b/backend/src/yojanamitra/models/source.py
+new file mode 100644
+index 0000000..e0bce97
+--- /dev/null
++++ b/backend/src/yojanamitra/models/source.py
+@@ -0,0 +1,65 @@
++"""Source authority and verification records for scheme facts."""
++
++from __future__ import annotations
++
++import uuid
++from datetime import datetime
++from typing import TYPE_CHECKING
++
++from sqlalchemy import (
++    Boolean,
++    CheckConstraint,
++    DateTime,
++    Enum as SAEnum,
++    ForeignKey,
++    JSON,
++    String,
++    Uuid,
++)
++from sqlalchemy.orm import Mapped, mapped_column, relationship
++
++from yojanamitra.db.base import Base
++from yojanamitra.models.enums import SourceTier, SourceType, enum_values
++
++if TYPE_CHECKING:
++    from yojanamitra.models.document import Document
++    from yojanamitra.models.eligibility_rule import EligibilityRule
++    from yojanamitra.models.scheme import Scheme
++
++
++class Source(Base):
++    """Track where scheme information originated and who verified it."""
++
++    __tablename__ = "sources"
++    __table_args__ = (
++        CheckConstraint(
++            "authority_score >= 0 AND authority_score <= 100", name="authority_score_range"
++        ),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    scheme_id: Mapped[str] = mapped_column(
++        ForeignKey("schemes.id", ondelete="CASCADE"), nullable=False, index=True
++    )
++    title: Mapped[str] = mapped_column(String(250), nullable=False)
++    url: Mapped[str] = mapped_column(String(2048), nullable=False)
++    authority: Mapped[str] = mapped_column(String(200), nullable=False)
++    source_type: Mapped[SourceType] = mapped_column(
++        SAEnum(SourceType, values_callable=enum_values, native_enum=False, create_constraint=True),
++        nullable=False,
++    )
++    tier: Mapped[SourceTier] = mapped_column(
++        SAEnum(SourceTier, values_callable=enum_values, native_enum=False, create_constraint=True),
++        nullable=False,
++    )
++    authority_score: Mapped[int] = mapped_column(default=0, nullable=False)
++    # Unknown sources must not be presented as official without an explicit review.
++    is_official: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
++    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
++    extra_metadata: Mapped[dict] = mapped_column("metadata", JSON, default=dict, nullable=False)
++
++    scheme: Mapped[Scheme] = relationship(back_populates="sources")
++    documents: Mapped[list[Document]] = relationship(
++        back_populates="source", cascade="all, delete-orphan"
++    )
++    eligibility_rules: Mapped[list[EligibilityRule]] = relationship(back_populates="source")
+diff --git a/backend/src/yojanamitra/models/user_profile.py b/backend/src/yojanamitra/models/user_profile.py
+new file mode 100644
+index 0000000..ad62672
+--- /dev/null
++++ b/backend/src/yojanamitra/models/user_profile.py
+@@ -0,0 +1,57 @@
++"""Anonymous, minimal eligibility profile without identity credentials."""
++
++from __future__ import annotations
++
++import uuid
++from datetime import datetime, timezone
++from decimal import Decimal
++
++from sqlalchemy import Boolean, CheckConstraint, DateTime, JSON, Numeric, String, Uuid
++from sqlalchemy.orm import Mapped, mapped_column
++
++from yojanamitra.db.base import Base
++
++
++class UserProfile(Base):
++    """Store voluntarily supplied eligibility attributes for an anonymous session."""
++
++    __tablename__ = "user_profiles"
++    __table_args__ = (
++        CheckConstraint("age IS NULL OR (age >= 0 AND age <= 120)", name="valid_age"),
++        CheckConstraint(
++            "beneficiary_age IS NULL OR (beneficiary_age >= 0 AND beneficiary_age <= 120)",
++            name="valid_beneficiary_age",
++        ),
++        CheckConstraint(
++            "annual_family_income IS NULL OR annual_family_income >= 0", name="nonnegative_income"
++        ),
++        CheckConstraint(
++            "landholding_acres IS NULL OR landholding_acres >= 0", name="nonnegative_land"
++        ),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    session_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True), default=uuid.uuid4, nullable=False, unique=True
++    )
++    age: Mapped[int | None]
++    beneficiary_age: Mapped[int | None]
++    beneficiary_relationship: Mapped[str | None] = mapped_column(String(60))
++    gender: Mapped[str | None] = mapped_column(String(40))
++    state_code: Mapped[str | None] = mapped_column(String(2))
++    district: Mapped[str | None] = mapped_column(String(100))
++    annual_family_income: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
++    income_band: Mapped[str | None] = mapped_column(String(60))
++    occupation: Mapped[str | None] = mapped_column(String(100))
++    employment_status: Mapped[str | None] = mapped_column(String(60))
++    is_student: Mapped[bool | None] = mapped_column(Boolean)
++    education_level: Mapped[str | None] = mapped_column(String(80))
++    is_farmer: Mapped[bool | None] = mapped_column(Boolean)
++    landholding_acres: Mapped[Decimal | None] = mapped_column(Numeric(10, 3))
++    residence_type: Mapped[str | None] = mapped_column(String(20))
++    disability_status: Mapped[str | None] = mapped_column(String(60))
++    scheme_interests: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
++    missing_fields: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
++    created_at: Mapped[datetime] = mapped_column(
++        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
++    )
+diff --git a/backend/src/yojanamitra/repositories/__init__.py b/backend/src/yojanamitra/repositories/__init__.py
+new file mode 100644
+index 0000000..f74b90b
+--- /dev/null
++++ b/backend/src/yojanamitra/repositories/__init__.py
+@@ -0,0 +1 @@
++"""Small storage helpers; business rules stay outside persistence."""
+diff --git a/backend/src/yojanamitra/repositories/schemes.py b/backend/src/yojanamitra/repositories/schemes.py
+new file mode 100644
+index 0000000..8fd1943
+--- /dev/null
++++ b/backend/src/yojanamitra/repositories/schemes.py
+@@ -0,0 +1,29 @@
++"""Read/write primitives for scheme records; no eligibility or RAG logic."""
++
++from sqlalchemy import select
++from sqlalchemy.orm import Session, selectinload
++
++from yojanamitra.models import Scheme, Source
++
++
++def get_scheme_by_id(session: Session, scheme_id: str) -> Scheme | None:
++    """Fetch a scheme and its registered sources without issuing N+1 queries."""
++
++    statement = select(Scheme).options(selectinload(Scheme.sources)).where(Scheme.id == scheme_id)
++    return session.scalar(statement)
++
++
++def add_scheme(session: Session, scheme: Scheme) -> Scheme:
++    """Persist a validated scheme within the caller's transaction."""
++
++    session.add(scheme)
++    session.flush()
++    return scheme
++
++
++def add_source(session: Session, source: Source) -> Source:
++    """Persist a source linked to an existing scheme in the same transaction."""
++
++    session.add(source)
++    session.flush()
++    return source
+diff --git a/backend/src/yojanamitra/schemas/domain.py b/backend/src/yojanamitra/schemas/domain.py
+new file mode 100644
+index 0000000..2b26bdf
+--- /dev/null
++++ b/backend/src/yojanamitra/schemas/domain.py
+@@ -0,0 +1,218 @@
++"""Strict typed contracts for the six Stage 1 domain entities."""
++
++from datetime import date, datetime
++from decimal import Decimal
++from typing import Annotated
++from uuid import UUID
++
++from pydantic import (
++    BaseModel,
++    ConfigDict,
++    Field,
++    HttpUrl,
++    JsonValue,
++    StringConstraints,
++    model_validator,
++)
++
++from yojanamitra.models.enums import (
++    ComparisonOperator,
++    DocumentStatus,
++    GroupOperator,
++    ProfileField,
++    RuleKind,
++    SchemeScope,
++    SchemeStatus,
++    SourceTier,
++    SourceType,
++)
++
++Slug = Annotated[
++    str, StringConstraints(min_length=2, max_length=80, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
++]
++StateCode = Annotated[str, StringConstraints(pattern=r"^[A-Z]{2}$")]
++Hash256 = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
++
++
++class DomainSchema(BaseModel):
++    """Reject unexpected fields, including identity and credential fields."""
++
++    model_config = ConfigDict(extra="forbid", from_attributes=True, str_strip_whitespace=True)
++
++
++class SchemeCreate(DomainSchema):
++    """Validate the structured metadata used to register a scheme."""
++
++    id: Slug
++    name: str = Field(min_length=2, max_length=250)
++    short_name: str | None = Field(default=None, max_length=80)
++    category: str = Field(min_length=2, max_length=80)
++    ministry: str | None = Field(default=None, max_length=180)
++    scope: SchemeScope = SchemeScope.CENTRAL
++    state_code: StateCode | None = None
++    status: SchemeStatus = SchemeStatus.UNKNOWN
++    last_verified_at: datetime | None = None
++    metadata: dict[str, JsonValue] = Field(default_factory=dict)
++
++    @model_validator(mode="after")
++    def validate_scope(self) -> "SchemeCreate":
++        """Require a state code for state/UT schemes and forbid it for central schemes."""
++
++        if self.scope == SchemeScope.CENTRAL and self.state_code is not None:
++            raise ValueError("Central schemes cannot specify a state_code")
++        if self.scope != SchemeScope.CENTRAL and self.state_code is None:
++            raise ValueError("State and UT schemes require a state_code")
++        return self
++
++
++class SourceCreate(DomainSchema):
++    """Validate source identity, URL and evidence-authority metadata."""
++
++    scheme_id: Slug
++    title: str = Field(min_length=2, max_length=250)
++    url: HttpUrl
++    authority: str = Field(min_length=2, max_length=200)
++    source_type: SourceType
++    tier: SourceTier
++    authority_score: int = Field(default=0, ge=0, le=100)
++    is_official: bool = False
++    last_verified_at: datetime | None = None
++    metadata: dict[str, JsonValue] = Field(default_factory=dict)
++
++
++class SourceRead(SourceCreate):
++    """Expose source metadata with its assigned immutable ID."""
++
++    id: UUID
++    # SQLAlchemy reserves `.metadata`; map the ORM alias back to the public name.
++    metadata: dict[str, JsonValue] = Field(
++        default_factory=dict, validation_alias="extra_metadata", serialization_alias="metadata"
++    )
++
++
++class SchemeRead(SchemeCreate):
++    """Return scheme metadata and registered sources without unsupported claims."""
++
++    metadata: dict[str, JsonValue] = Field(
++        default_factory=dict, validation_alias="extra_metadata", serialization_alias="metadata"
++    )
++    sources: list[SourceRead] = Field(default_factory=list)
++
++
++class EligibilityRuleCreate(DomainSchema):
++    """Validate a nested ALL/ANY group or one leaf comparison."""
++
++    scheme_id: Slug
++    parent_rule_id: UUID | None = None
++    source_id: UUID | None = None
++    kind: RuleKind
++    group_operator: GroupOperator | None = None
++    profile_field: ProfileField | None = None
++    comparison_operator: ComparisonOperator | None = None
++    expected_value: JsonValue | None = None
++    priority: int = Field(default=0, ge=0)
++    rule_version: str | None = Field(default=None, max_length=80)
++    machine_verified: bool = False
++
++    @model_validator(mode="after")
++    def validate_rule_shape(self) -> "EligibilityRuleCreate":
++        """Prevent mixing group-only and condition-only fields in one node."""
++
++        if self.kind == RuleKind.GROUP:
++            if self.group_operator is None:
++                raise ValueError("A group requires group_operator")
++            if any(
++                value is not None
++                for value in (self.profile_field, self.comparison_operator, self.expected_value)
++            ):
++                raise ValueError("A group cannot contain condition fields")
++        elif (
++            self.group_operator is not None
++            or self.profile_field is None
++            or self.comparison_operator is None
++        ):
++            raise ValueError("A condition needs profile_field and comparison_operator only")
++        if (
++            self.kind == RuleKind.CONDITION
++            and self.comparison_operator != ComparisonOperator.EXISTS
++        ):
++            if self.expected_value is None:
++                raise ValueError("Non-EXISTS conditions require expected_value")
++        return self
++
++
++class DocumentCreate(DomainSchema):
++    """Validate source-bound version metadata before document ingestion."""
++
++    source_id: UUID
++    title: str = Field(min_length=2, max_length=250)
++    source_url: HttpUrl
++    content_hash: Hash256
++    mime_type: str = Field(min_length=3, max_length=120)
++    storage_uri: str | None = Field(default=None, max_length=2048)
++    version_label: str = Field(min_length=1, max_length=80)
++    status: DocumentStatus = DocumentStatus.UNVERIFIED
++    downloaded_at: datetime | None = None
++    published_at: date | None = None
++    effective_from: date | None = None
++    effective_to: date | None = None
++    page_count: int | None = Field(default=None, ge=0)
++    language: str = Field(default="en", min_length=2, max_length=10)
++    metadata: dict[str, JsonValue] = Field(default_factory=dict)
++
++    @model_validator(mode="after")
++    def validate_effective_window(self) -> "DocumentCreate":
++        """Reject document versions whose end precedes their effective start."""
++
++        if self.effective_from and self.effective_to and self.effective_from > self.effective_to:
++            raise ValueError("effective_to must not precede effective_from")
++        return self
++
++
++class ChunkCreate(DomainSchema):
++    """Validate retrievable text and section/page citation coordinates."""
++
++    document_id: UUID
++    chunk_index: int = Field(ge=0)
++    text: str = Field(min_length=1)
++    heading: str | None = Field(default=None, max_length=250)
++    section: str | None = Field(default=None, max_length=100)
++    heading_path: list[str] = Field(default_factory=list)
++    page_start: int | None = Field(default=None, ge=1)
++    page_end: int | None = Field(default=None, ge=1)
++    token_count: int | None = Field(default=None, ge=0)
++    content_hash: Hash256 | None = None
++    metadata: dict[str, JsonValue] = Field(default_factory=dict)
++
++    @model_validator(mode="after")
++    def validate_pages(self) -> "ChunkCreate":
++        """Keep page citations ordered whenever both bounds are present."""
++
++        if self.page_start and self.page_end and self.page_start > self.page_end:
++            raise ValueError("page_end must not precede page_start")
++        return self
++
++
++class UserProfileCreate(DomainSchema):
++    """Accept a minimal anonymous eligibility profile, never credentials."""
++
++    age: int | None = Field(default=None, ge=0, le=120)
++    beneficiary_age: int | None = Field(default=None, ge=0, le=120)
++    beneficiary_relationship: str | None = Field(default=None, max_length=60)
++    gender: str | None = Field(default=None, max_length=40)
++    state_code: StateCode | None = None
++    district: str | None = Field(default=None, max_length=100)
++    annual_family_income: Decimal | None = Field(
++        default=None, ge=0, max_digits=14, decimal_places=2
++    )
++    income_band: str | None = Field(default=None, max_length=60)
++    occupation: str | None = Field(default=None, max_length=100)
++    employment_status: str | None = Field(default=None, max_length=60)
++    is_student: bool | None = None
++    education_level: str | None = Field(default=None, max_length=80)
++    is_farmer: bool | None = None
++    landholding_acres: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
++    residence_type: str | None = Field(default=None, max_length=20)
++    disability_status: str | None = Field(default=None, max_length=60)
++    scheme_interests: list[str] = Field(default_factory=list, max_length=20)
++    missing_fields: list[ProfileField] = Field(default_factory=list)
+diff --git a/backend/tests/test_database.py b/backend/tests/test_database.py
+new file mode 100644
+index 0000000..f9a1949
+--- /dev/null
++++ b/backend/tests/test_database.py
+@@ -0,0 +1,171 @@
++"""Stage 1 SQLite integration tests for the real migration and six entities."""
++
++from collections.abc import Iterator
++from decimal import Decimal
++from pathlib import Path
++from uuid import uuid4
++
++import pytest
++from alembic import command
++from alembic.config import Config
++from sqlalchemy import Engine, inspect, select, text
++from sqlalchemy.exc import IntegrityError
++from sqlalchemy.orm import Session, configure_mappers
++
++from yojanamitra.db.base import Base
++from yojanamitra.db.session import create_database_engine
++from yojanamitra.models import Chunk, Document, EligibilityRule, Scheme, Source, UserProfile
++from yojanamitra.models.enums import (
++    ComparisonOperator,
++    GroupOperator,
++    ProfileField,
++    RuleKind,
++    SchemeScope,
++    SourceTier,
++    SourceType,
++)
++from yojanamitra.repositories.schemes import add_scheme, add_source, get_scheme_by_id
++
++BACKEND = Path(__file__).resolve().parents[1]
++
++
++@pytest.fixture
++def sqlite_engine(tmp_path: Path) -> Iterator[Engine]:
++    """Create a migrated temporary database with foreign keys enforced."""
++
++    engine = create_database_engine(f"sqlite:///{tmp_path / 'stage1.db'}")
++    config = Config(str(BACKEND / "alembic.ini"))
++    with engine.connect() as connection:
++        config.attributes["connection"] = connection
++        command.upgrade(config, "head")
++    yield engine
++    engine.dispose()
++
++
++def test_six_models_and_relationships_register() -> None:
++    """Check that all models are connected before database interactions begin."""
++
++    configure_mappers()
++    assert set(Base.metadata.tables) == {
++        "schemes", "sources", "eligibility_rules", "documents", "chunks", "user_profiles"
++    }
++
++
++def test_migration_upgrade_and_downgrade(sqlite_engine: Engine) -> None:
++    """Ensure Alembic creates all six entities and can reverse the initial version."""
++
++    assert set(inspect(sqlite_engine).get_table_names()) >= set(Base.metadata.tables)
++    config = Config(str(BACKEND / "alembic.ini"))
++    with sqlite_engine.connect() as connection:
++        config.attributes["connection"] = connection
++        command.downgrade(config, "base")
++    assert not (set(inspect(sqlite_engine).get_table_names()) & set(Base.metadata.tables))
++
++
++def test_all_entities_persist_and_read(sqlite_engine: Engine) -> None:
++    """Round-trip metadata, nested rules, versions, chunks and an anonymous profile."""
++
++    with Session(sqlite_engine) as session, session.begin():
++        scheme = add_scheme(session, Scheme(id="test-scheme", name="Synthetic", category="test"))
++        source = add_source(session, Source(
++            scheme_id=scheme.id, title="Synthetic source", url="https://example.org/test",
++            authority="Test authority", source_type=SourceType.OTHER, tier=SourceTier.CONTEXT_ONLY
++        ))
++        rule = EligibilityRule(
++            scheme_id=scheme.id, kind=RuleKind.GROUP, group_operator=GroupOperator.ALL
++        )
++        session.add(rule)
++        session.flush()
++        session.add(EligibilityRule(
++            scheme_id=scheme.id, parent_rule_id=rule.id, kind=RuleKind.CONDITION,
++            profile_field=ProfileField.AGE, comparison_operator=ComparisonOperator.GTE,
++            expected_value=18, source_id=source.id
++        ))
++        document = Document(
++            source_id=source.id, title="Synthetic PDF metadata",
++            source_url="https://example.org/test.pdf", content_hash="a" * 64,
++            mime_type="application/pdf", version_label="v1"
++        )
++        session.add(document)
++        session.flush()
++        session.add(Chunk(
++            document_id=document.id, chunk_index=0, text="Test-only text",
++            heading_path=["Overview"], page_start=1, page_end=1
++        ))
++        profile = UserProfile(age=28, beneficiary_age=68, annual_family_income=Decimal("250000.00"))
++        session.add(profile)
++
++    with Session(sqlite_engine) as session:
++        scheme = get_scheme_by_id(session, "test-scheme")
++        assert scheme is not None
++        assert scheme.status.value == "unknown"
++        assert len(scheme.sources) == 1
++        assert scheme.sources[0].is_official is False
++        assert (
++            session.scalar(
++                select(EligibilityRule).where(EligibilityRule.parent_rule_id.is_not(None))
++            )
++            is not None
++        )
++        assert session.scalar(select(Document)).version_label == "v1"
++        assert session.scalar(select(Chunk)).heading_path == ["Overview"]
++        saved_profile = session.scalar(select(UserProfile))
++        assert saved_profile is not None
++        assert saved_profile.beneficiary_age == 68
++        assert saved_profile.annual_family_income == Decimal("250000.00")
++        assert saved_profile.session_id is not None
++
++
++def test_foreign_keys_and_database_constraints(sqlite_engine: Engine) -> None:
++    """Reject orphan records and inconsistent jurisdiction even outside Pydantic."""
++
++    with Session(sqlite_engine) as session:
++        session.add(Source(
++            scheme_id="missing", title="Orphan", url="https://example.org",
++            authority="Unknown", source_type=SourceType.OTHER, tier=SourceTier.CONTEXT_ONLY
++        ))
++        with pytest.raises(IntegrityError):
++            session.commit()
++        session.rollback()
++
++        session.add(Scheme(
++            id="bad-state", name="Bad", category="test", scope=SchemeScope.CENTRAL,
++            state_code="MH"
++        ))
++        with pytest.raises(IntegrityError):
++            session.commit()
++        session.rollback()
++
++
++def test_duplicate_chunk_position_is_rejected(sqlite_engine: Engine) -> None:
++    """Ensure two chunks cannot claim the same index within one document version."""
++
++    with Session(sqlite_engine) as session:
++        scheme = Scheme(id="test", name="Synthetic", category="test")
++        session.add(scheme)
++        source = Source(
++            scheme_id="test", title="Synthetic", url="https://example.org",
++            authority="Test", source_type=SourceType.OTHER, tier=SourceTier.CONTEXT_ONLY
++        )
++        session.add(source)
++        session.flush()
++        doc = Document(
++            source_id=source.id, title="Test", source_url="https://example.org/test.pdf",
++            content_hash="0" * 64, mime_type="application/pdf", version_label="v1"
++        )
++        session.add(doc)
++        session.flush()
++        session.add_all([
++            Chunk(id=uuid4(), document_id=doc.id, chunk_index=0, text="One"),
++            Chunk(id=uuid4(), document_id=doc.id, chunk_index=0, text="Two"),
++        ])
++        with pytest.raises(IntegrityError):
++            session.commit()
++        session.rollback()
++
++
++def test_sqlite_foreign_keys_enabled(sqlite_engine: Engine) -> None:
++    """Detect accidental changes that leave SQLite integrity disabled by default."""
++
++    with sqlite_engine.connect() as connection:
++        assert connection.execute(text("PRAGMA foreign_keys")).scalar_one() == 1
+diff --git a/backend/tests/test_demo_cli.py b/backend/tests/test_demo_cli.py
+new file mode 100644
+index 0000000..4df1087
+--- /dev/null
++++ b/backend/tests/test_demo_cli.py
+@@ -0,0 +1,57 @@
++"""Local fixture CLI regression checks for safe, repeatable manual testing."""
++
++from pathlib import Path
++
++import pytest
++from sqlalchemy import select
++from sqlalchemy.orm import Session
++
++import yojanamitra.cli as cli
++from yojanamitra.core.config import Settings
++from yojanamitra.db.base import Base
++from yojanamitra.db.session import create_database_engine
++from yojanamitra.models import Scheme, Source
++
++
++def test_demo_seed_is_idempotent_and_unofficial(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
++    """Create only the synthetic fixture once and keep its source unverified."""
++
++    database_url = f"sqlite:///{tmp_path / 'demo.db'}"
++    engine = create_database_engine(database_url)
++    Base.metadata.create_all(engine)
++
++    def test_settings() -> Settings:
++        """Return an isolated local configuration for the demo CLI."""
++
++        return Settings(environment="local", database_url=database_url, _env_file=None)
++
++    def test_engine():
++        """Point the seed function to the temporary test database."""
++
++        return engine
++
++    monkeypatch.setattr(cli, "get_settings", test_settings)
++    monkeypatch.setattr(cli, "get_engine", test_engine)
++    cli.seed_demo()
++    cli.seed_demo()
++
++    with Session(engine) as session:
++        schemes = session.scalars(select(Scheme)).all()
++        sources = session.scalars(select(Source)).all()
++        assert len(schemes) == len(sources) == 1
++        assert schemes[0].extra_metadata["demo_only"] is True
++        assert sources[0].is_official is False
++    engine.dispose()
++
++
++def test_demo_seed_rejects_nonlocal_environment(monkeypatch: pytest.MonkeyPatch) -> None:
++    """Prevent synthetic government-like fixtures from entering production settings."""
++
++    def unsafe_settings() -> Settings:
++        """Provide nonlocal settings without connecting to a production database."""
++
++        return Settings(environment="production", _env_file=None)
++
++    monkeypatch.setattr(cli, "get_settings", unsafe_settings)
++    with pytest.raises(RuntimeError, match="local SQLite"):
++        cli.seed_demo()
+diff --git a/backend/tests/test_documentation.py b/backend/tests/test_documentation.py
+index 6530597..8fcbb30 100644
+--- a/backend/tests/test_documentation.py
++++ b/backend/tests/test_documentation.py
+@@ -3,7 +3,8 @@
+ import ast
+ from pathlib import Path
+ 
+-ROOTS_TO_CHECK = (Path("src"), Path("tests"))
++BACKEND = Path(__file__).resolve().parents[1]
++ROOTS_TO_CHECK = (BACKEND / "src", BACKEND / "tests", BACKEND / "migrations")
+ 
+ 
+ def _iter_python_files() -> list[Path]:
+diff --git a/backend/tests/test_domain_schemas.py b/backend/tests/test_domain_schemas.py
+new file mode 100644
+index 0000000..733c5f7
+--- /dev/null
++++ b/backend/tests/test_domain_schemas.py
+@@ -0,0 +1,131 @@
++"""Stage 1 validation tests that do not need a running database."""
++
++from datetime import date
++from uuid import uuid4
++
++import pytest
++from pydantic import ValidationError
++
++from yojanamitra.models.enums import ComparisonOperator, GroupOperator, RuleKind, SchemeScope
++from yojanamitra.schemas.domain import (
++    ChunkCreate,
++    DocumentCreate,
++    EligibilityRuleCreate,
++    SchemeCreate,
++    SourceCreate,
++    UserProfileCreate,
++)
++
++
++def test_scheme_status_defaults_to_unknown() -> None:
++    """Prevent an unreviewed scheme from being shown as active."""
++
++    scheme = SchemeCreate(id="demo-scheme", name="Synthetic scheme", category="test")
++    assert scheme.status.value == "unknown"
++    assert scheme.state_code is None
++
++
++@pytest.mark.parametrize(
++    ("scope", "state", "is_valid"),
++    [
++        (SchemeScope.CENTRAL, None, True),
++        (SchemeScope.CENTRAL, "MH", False),
++        (SchemeScope.STATE, "MH", True),
++        (SchemeScope.STATE, None, False),
++        (SchemeScope.UT, "DL", True),
++        (SchemeScope.UT, "mH", False),
++    ],
++)
++def test_scope_state_validation(scope: SchemeScope, state: str | None, is_valid: bool) -> None:
++    """Require jurisdiction and state information to remain consistent."""
++
++    fields = dict(
++        id="demo-scheme", name="Synthetic scheme", category="test", scope=scope, state_code=state
++    )
++    if is_valid:
++        assert SchemeCreate.model_validate(fields).scope == scope
++    else:
++        with pytest.raises(ValidationError):
++            SchemeCreate.model_validate(fields)
++
++
++def test_source_defaults_to_unverified_and_requires_url() -> None:
++    """Do not mark an arbitrary source official or accept a malformed URL."""
++
++    payload = dict(
++        scheme_id="demo-scheme", title="Synthetic source", url="https://example.org/test",
++        authority="Demo authority", source_type="other", tier="tier_3"
++    )
++    assert SourceCreate.model_validate(payload).is_official is False
++    with pytest.raises(ValidationError):
++        SourceCreate.model_validate({**payload, "url": "not a web URL"})
++    with pytest.raises(ValidationError):
++        SourceCreate.model_validate({**payload, "authority_score": 101})
++
++
++def test_nested_group_and_leaf_condition_are_separate() -> None:
++    """Allow nested-rule shape definitions without evaluating them in Stage 1."""
++
++    group = EligibilityRuleCreate(
++        scheme_id="demo-scheme", kind=RuleKind.GROUP, group_operator=GroupOperator.ALL
++    )
++    condition = EligibilityRuleCreate(
++        scheme_id="demo-scheme", parent_rule_id=uuid4(), kind=RuleKind.CONDITION,
++        profile_field="age", comparison_operator=ComparisonOperator.GTE, expected_value=18
++    )
++    assert group.machine_verified is False
++    assert condition.expected_value == 18
++    with pytest.raises(ValidationError):
++        EligibilityRuleCreate(
++            scheme_id="demo-scheme", kind=RuleKind.GROUP,
++            group_operator=GroupOperator.ANY, profile_field="age"
++        )
++    with pytest.raises(ValidationError):
++        EligibilityRuleCreate(
++            scheme_id="demo-scheme", kind=RuleKind.CONDITION,
++            profile_field="age", comparison_operator=ComparisonOperator.GTE
++        )
++
++
++def test_document_version_dates_and_hash_are_validated() -> None:
++    """Reject invalid digest text and backwards effective dates."""
++
++    fields = dict(
++        source_id=uuid4(), title="Synthetic document", source_url="https://example.org/test.pdf",
++        content_hash="a" * 64, mime_type="application/pdf", version_label="v1",
++        effective_from=date(2026, 1, 2), effective_to=date(2026, 1, 1)
++    )
++    with pytest.raises(ValidationError):
++        DocumentCreate.model_validate(fields)
++    with pytest.raises(ValidationError):
++        DocumentCreate.model_validate({**fields, "effective_to": None, "content_hash": "abc"})
++    assert (
++        DocumentCreate.model_validate({**fields, "effective_to": None}).status.value
++        == "unverified"
++    )
++
++
++def test_chunk_metadata_preserves_ordered_citations() -> None:
++    """Require valid source page coordinates and a nonempty chunk body."""
++
++    fields = dict(
++        document_id=uuid4(), chunk_index=0, text="Synthetic paragraph", page_start=2, page_end=1
++    )
++    with pytest.raises(ValidationError):
++        ChunkCreate.model_validate(fields)
++    with pytest.raises(ValidationError):
++        ChunkCreate.model_validate({**fields, "page_end": 2, "text": ""})
++    assert ChunkCreate.model_validate({**fields, "page_end": 3}).page_end == 3
++
++
++def test_anonymous_profile_rejects_sensitive_or_unknown_fields() -> None:
++    """Keep discovery anonymous and retain distinct user/beneficiary ages."""
++
++    profile = UserProfileCreate(age=28, beneficiary_age=68, beneficiary_relationship="father")
++    assert profile.age == 28
++    assert profile.beneficiary_age == 68
++    for secret in ("aadhaar_number", "pan", "otp", "bank_account", "password"):
++        with pytest.raises(ValidationError):
++            UserProfileCreate.model_validate({secret: "must not be stored"})
++    with pytest.raises(ValidationError):
++        UserProfileCreate(age=121)
+diff --git a/backend/tests/test_schemes_api.py b/backend/tests/test_schemes_api.py
+new file mode 100644
+index 0000000..88c7b0b
+--- /dev/null
++++ b/backend/tests/test_schemes_api.py
+@@ -0,0 +1,74 @@
++"""HTTP contract tests for Stage 1's read-only scheme detail endpoint."""
++
++from collections.abc import Iterator
++from pathlib import Path
++
++import pytest
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++from sqlalchemy import Engine
++from sqlalchemy.orm import Session, sessionmaker
++
++from yojanamitra.api.routes.schemes import get_db_session
++from yojanamitra.db.base import Base
++from yojanamitra.db.session import create_database_engine
++from yojanamitra.models import Scheme, Source
++from yojanamitra.models.enums import SourceTier, SourceType
++
++
++@pytest.fixture
++def scheme_client(test_app: FastAPI, tmp_path: Path) -> Iterator[TestClient]:
++    """Serve HTTP tests with an isolated sample database, never real scheme data."""
++
++    engine: Engine = create_database_engine(f"sqlite:///{tmp_path / 'api.db'}")
++    Base.metadata.create_all(engine)
++    with Session(engine) as session, session.begin():
++        session.add(Scheme(id="stage1-demo-scheme", name="Synthetic Test Scheme", category="test"))
++        session.add(Source(
++            scheme_id="stage1-demo-scheme", title="Synthetic source",
++            url="https://example.org/test",
++            authority="Local tests", source_type=SourceType.OTHER, tier=SourceTier.CONTEXT_ONLY
++        ))
++    factory = sessionmaker(engine, expire_on_commit=False)
++
++    def provide_test_session() -> Iterator[Session]:
++        """Override production database access with the isolated test engine."""
++
++        with factory() as session:
++            yield session
++
++    test_app.dependency_overrides[get_db_session] = provide_test_session
++    try:
++        with TestClient(test_app) as test_client:
++            yield test_client
++    finally:
++        test_app.dependency_overrides.clear()
++        engine.dispose()
++
++
++def test_get_scheme_and_its_sources(scheme_client: TestClient) -> None:
++    """Return only validated metadata; never invent eligibility or benefit data."""
++
++    response = scheme_client.get("/api/v1/schemes/stage1-demo-scheme")
++    assert response.status_code == 200
++    payload = response.json()
++    assert payload["id"] == "stage1-demo-scheme"
++    assert payload["status"] == "unknown"
++    assert payload["sources"][0]["is_official"] is False
++    assert payload["sources"][0]["url"] == "https://example.org/test"
++    assert "eligible" not in payload
++
++
++def test_scheme_not_found(scheme_client: TestClient) -> None:
++    """Return a stable 404 for IDs absent from the structured registry."""
++
++    response = scheme_client.get("/api/v1/schemes/nonexistent")
++    assert response.status_code == 404
++    assert response.json() == {"detail": "Scheme not found"}
++
++
++def test_scheme_id_validation(scheme_client: TestClient) -> None:
++    """Reject malformed IDs without constructing raw database queries."""
++
++    response = scheme_client.get("/api/v1/schemes/INVALID_ID")
++    assert response.status_code == 422
+diff --git a/docs/architecture/STAGE-1-ACCEPTANCE.md b/docs/architecture/STAGE-1-ACCEPTANCE.md
+new file mode 100644
+index 0000000..2961cef
+--- /dev/null
++++ b/docs/architecture/STAGE-1-ACCEPTANCE.md
+@@ -0,0 +1,41 @@
++# Stage 1 — Acceptance gate
++
++## Independently testable layers
++
++| Layer | Test |
++| --- | --- |
++| Pydantic contracts | `python -m pytest tests/test_domain_schemas.py` |
++| ORM relationships and constraints | `python -m pytest tests/test_database.py` |
++| Alembic migration upgrade/downgrade | `python -m pytest tests/test_database.py -k migration` |
++| Local test data safety | `python -m pytest tests/test_demo_cli.py` |
++| FastAPI read contract | `python -m pytest tests/test_schemes_api.py` |
++| Stage 0 regression and documentation | `python -m pytest` |
++
++All commands run from `backend/`. From repository root, `python -m pytest` loads the same
++checkout because of the root `pytest.ini`.
++
++## Manual smoke gate (PowerShell, from `backend/`)
++
++```powershell
++python -m pip install -e ".[dev]"
++python -m alembic upgrade head
++python -m yojanamitra.cli seed-demo
++python -m uvicorn yojanamitra.main:app --reload
++```
++
++In a second terminal:
++
++```powershell
++Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
++Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme
++```
++
++Expected scheme ID: `stage1-demo-scheme`; status `unknown`, one source with `is_official=false`.
++The record is explicitly synthetic. `GET /api/v1/schemes/nonexistent` must return HTTP 404.
++
++## Not covered by this gate
++
++This workspace did not have a PostgreSQL server or downloadable Ruff/mypy packages. Run
++`python -m ruff check .`, `python -m ruff format --check .`, and `python -m mypy src`
++on your developer machine. A live PostgreSQL migration is planned as a separate integration
++gate. Do not treat the Stage 1 synthetic record as verified government information.
+diff --git a/docs/architecture/STAGE-1-DATA-MODEL.md b/docs/architecture/STAGE-1-DATA-MODEL.md
+new file mode 100644
+index 0000000..fc6d4d3
+--- /dev/null
++++ b/docs/architecture/STAGE-1-DATA-MODEL.md
+@@ -0,0 +1,44 @@
++# Stage 1 — Domain model contract
++
++This stage introduces the **structure**, not verified government-scheme facts. Stage 2 will
++populate official records. The Stage 8 deterministic eligibility engine will interpret
++rules; it is **not** implemented here.
++
++## Entity boundaries
++
++```text
++Scheme [slug, jurisdiction, unknown/active/paused/closed status]
++├── Source [UUID, type/tier/authority, is_official=false by default]
++│   └── Document [UUID, version, hash, effective dates, unverified by default]
++│       └── Chunk [UUID, text, heading path, source pages]
++└── EligibilityRule [UUID, group ALL/ANY or typed condition; optional parent/source]
++
++UserProfile [anonymous UUID session; only eligibility attributes]
++```
++
++`scheme_id` is a stable slug; the other entity IDs are UUIDs. `metadata` is stored as a JSON
++column using `extra_metadata` in the ORM, since SQLAlchemy reserves `metadata`.
++
++### Safeguards already enforced
++
++- Pydantic rejects extra fields in every domain payload, especially unrequested sensitive
++  fields in `UserProfileCreate`; a user and a separate beneficiary can have different ages.
++- Central schemes cannot specify a state code; State/UT schemes require one.
++- Schemes default to `unknown`, sources to nonofficial, rules to not machine verified,
++  documents to unverified. These states require later source evidence to change.
++- Rule group/condition shapes, page/effective-date ranges, hashes and authority score are
++  validated. Foreign keys and key constraints are also enforced by the database.
++- `Scheme → Source → Document → Chunk` and `Scheme → EligibilityRule` are separate from the
++  anonymous `UserProfile` table. A chunk retains document/section/page linkage for citations.
++
++### Intentional Stage 1 limits
++
++No API accepts new government-scheme facts yet. Future ingestion must check scheme/source
++ownership, parent-rule consistency, source authority, history/version validity, and official
++URLs before setting trusted states. No source or rule is treated as verified merely because
++it was stored. No full Aadhaar number, PAN, bank credential, OTP or password is modeled.
++
++The local default is SQLite for a test gate without a service dependency. The same SQLAlchemy
++model/migration supports PostgreSQL via `postgresql+psycopg://...`; an actual PostgreSQL
++integration gate remains pending until a server is available. SQLite tests are not claimed
++to prove PostgreSQL migration behavior.
+diff --git a/docs/decisions/ADR-001-local-sqlite-postgres-target.md b/docs/decisions/ADR-001-local-sqlite-postgres-target.md
+new file mode 100644
+index 0000000..716970a
+--- /dev/null
++++ b/docs/decisions/ADR-001-local-sqlite-postgres-target.md
+@@ -0,0 +1,14 @@
++# ADR-001 — Local SQLite gate with PostgreSQL target
++
++**Status:** Accepted for Stage 1.
++
++**Decision:** Use SQLAlchemy models and an explicit Alembic migration. Make local SQLite the
++default so the first domain gate runs without Docker or database administration. Keep a
++PostgreSQL URL/driver option for the planned structured-data service.
++
++**Rationale:** Every entity and endpoint can be tested today. SQLite tests enable foreign-key
++checks and use a real migration rather than mock repositories.
++
++**Trade-off:** SQLite success does not establish PostgreSQL type/index/migration correctness.
++A real PostgreSQL integration test must be run before relying on its deployment path.
++No eligibility/RAG/agent functionality is introduced by this decision.
+diff --git a/frontend/README.md b/frontend/README.md
+index 7d0deef..1acbecd 100644
+--- a/frontend/README.md
++++ b/frontend/README.md
+@@ -4,7 +4,7 @@ This directory is intentionally a **separate application boundary**.
+ 
+ The citizen-facing frontend will be implemented in its dedicated delivery stage using an open-source React/Next.js stack. It will consume the same versioned backend API that is tested from the terminal during earlier stages.
+ 
+-Stage 0 does not initialize Node.js dependencies yet. This keeps the first acceptance gate focused on the backend contract while preserving the frontend/mobile-ready architecture from day one.
++Stages 0–1 do not initialize Node.js dependencies yet. This keeps the first acceptance gate focused on the backend contract while preserving the frontend/mobile-ready architecture from day one.
+ 
+ Future frontend responsibilities include:
+ 
