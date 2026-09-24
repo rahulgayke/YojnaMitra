@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from yojanamitra.models import Scheme, Source
+from yojanamitra.models.enums import SchemeStatus
 
 
 def get_scheme_by_id(session: Session, scheme_id: str) -> Scheme | None:
@@ -27,3 +28,27 @@ def add_source(session: Session, source: Source) -> Source:
     session.add(source)
     session.flush()
     return source
+
+
+def list_official_schemes(
+    session: Session,
+    *,
+    category: str | None = None,
+    status: SchemeStatus | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Scheme]:
+    """List real registry records without exposing the synthetic Stage 1 fixture."""
+
+    # A test fixture must never surface as a real citizen-facing search result.
+    statement = (
+        select(Scheme)
+        .options(selectinload(Scheme.sources))
+        .where(Scheme.category != "test_only")
+        .order_by(Scheme.id)
+    )
+    if category is not None:
+        statement = statement.where(Scheme.category == category)
+    if status is not None:
+        statement = statement.where(Scheme.status == status)
+    return list(session.scalars(statement.offset(offset).limit(limit)).all())

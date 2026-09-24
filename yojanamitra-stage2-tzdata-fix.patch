@@ -1,0 +1,74 @@
+diff --git a/README.md b/README.md
+index 1883f63..c141ff9 100644
+--- a/README.md
++++ b/README.md
+@@ -42,7 +42,9 @@ python -m pip install -e ".[dev]"
+ 
+ If you already have the Stage 1 virtual environment, reinstall the editable package from
+ the current checkout: `python -m pip install -e ".[dev]"`. Use `python -m ruff` to avoid
+-Windows PATH issues. Optional development PostgreSQL driver:
++Windows PATH issues. The core dependencies include `tzdata` so `Asia/Kolkata` works
++on Windows and other environments without an OS timezone database. If you already installed
++Stage 2 before this fix, rerun `python -m pip install -e ".[dev]"`. Optional PostgreSQL driver:
+ `python -m pip install -e ".[dev,postgres]"`.
+ 
+ ## Test each layer before combining them
+diff --git a/backend/pyproject.toml b/backend/pyproject.toml
+index 16d564c..f899d0a 100644
+--- a/backend/pyproject.toml
++++ b/backend/pyproject.toml
+@@ -16,6 +16,8 @@ dependencies = [
+     "uvicorn[standard]>=0.30,<1.0",
+     "sqlalchemy>=2.0,<3.0",
+     "alembic>=1.13,<2.0",
++    # Provides IANA timezone records on Windows and minimal Linux images.
++    "tzdata>=2025.2",
+ ]
+ 
+ [project.optional-dependencies]
+diff --git a/backend/tests/test_timezones.py b/backend/tests/test_timezones.py
+new file mode 100644
+index 0000000..0bb67b0
+--- /dev/null
++++ b/backend/tests/test_timezones.py
+@@ -0,0 +1,24 @@
++"""Cross-platform timezone regression tests for registry review dates."""
++
++from __future__ import annotations
++
++import os
++import subprocess
++import sys
++
++
++def test_india_timezone_loads_without_system_timezone_database() -> None:
++    """Load Asia/Kolkata from packaged tzdata, even without an OS timezone database."""
++
++    # Disable the OS timezone path to reproduce the Windows/minimal-container case.
++    env = os.environ.copy()
++    env["PYTHONTZPATH"] = ""
++    result = subprocess.run(
++        [sys.executable, "-c", "from zoneinfo import ZoneInfo; print(ZoneInfo('Asia/Kolkata'))"],
++        capture_output=True,
++        text=True,
++        env=env,
++        check=False,
++    )
++    assert result.returncode == 0, result.stderr
++    assert result.stdout.strip() == "Asia/Kolkata"
+diff --git a/docs/architecture/STAGE-2-ACCEPTANCE.md b/docs/architecture/STAGE-2-ACCEPTANCE.md
+index 3159a5f..012860d 100644
+--- a/docs/architecture/STAGE-2-ACCEPTANCE.md
++++ b/docs/architecture/STAGE-2-ACCEPTANCE.md
+@@ -60,3 +60,11 @@ reviews, freshness monitoring, detailed rules and evidence retrieval remain futu
+   education filter 200 (3 records), scheme detail 200 (unknown/not publish-ready),
+   source detail 200 (identity-only), active filter 200 (empty).
+ - Ruff, mypy and real PostgreSQL were **not executed** in this environment.
++
++## Cross-platform timezone dependency fix
++
++`tzdata` is declared in `backend/pyproject.toml`, rather than relying on the host OS
++to provide IANA timezone records. `tests/test_timezones.py` exercises the
++`Asia/Kolkata` lookup with `PYTHONTZPATH` empty, matching the behavior of a machine
++without a system timezone database (including many Windows installations).
++Install the updated project dependencies before running the test gate.

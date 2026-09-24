@@ -1,27 +1,37 @@
-# YojanaMitra — Stage 1 (Structured Domain Model)
+# YojanaMitra — Stage 2: Official Source Registry
 
-An open-source, incrementally tested Indian government-scheme advisor. The core product rule
-is: **the LLM coordinates and explains; deterministic systems decide; official evidence
-grounds claims.** Stage 1 introduces structure only; no verified schemes or eligibility
-results are provided yet.
+A layered, open-source government-scheme advisor for Indian citizens. The key product
+principle remains: **the LLM coordinates and explains; deterministic systems make
+deterministic decisions; official evidence grounds factual claims.**
 
-The corrected Stage 0 health API and source-resolution safeguard are preserved. See
-[`PROJECT_DELIVERY_PLAN.md`](PROJECT_DELIVERY_PLAN.md),
-[`TASK_TRACKER.md`](TASK_TRACKER.md) and
-[`docs/architecture/STAGE-1-DATA-MODEL.md`](docs/architecture/STAGE-1-DATA-MODEL.md).
+Stage 2 extends the **corrected Stage 0 + Stage 1 repository**. It does not begin the RAG,
+LLM, eligibility engine or frontend. The frontend remains a separate future Next.js app.
 
-## What you get
+## What Stage 2 adds
 
-- Six typed ORM entities and strict Pydantic input/output contracts.
-- Migration-managed local persistence using SQLAlchemy and Alembic.
-- SQLite by default so Stage 1 can be tested without Docker; an optional PostgreSQL driver
-  and database URL for the planned production data layer.
-- `GET /api/v1/schemes/{scheme_id}` returning stored metadata and sources.
-- Synthetic-only, idempotent CLI test fixture; it cannot seed production settings.
-- Isolated model/schema/migration/API tests and mandatory function/method docstrings.
-- `frontend/` remains a separate future Next.js application boundary.
+- 20 curated Central Government scheme identities spanning agriculture, energy, housing,
+  healthcare, women's welfare, artisans, livelihoods, finance, education and social security.
+- 21 linked official-source records, including a secondary government announcement for
+  PM SVANidhi. Source authority, URL, tier, identity-review method and calendar date retained.
+- Offline strict JSON validation, host-safety controls, duplicate detection, and provenance
+  labels; no automatic source fetching or myScheme scraping.
+- Atomic/idempotent import with stable source IDs and conflict rejection.
+- `GET /api/v1/schemes` (pagination/category/status filtering), existing scheme detail,
+  and `GET /api/v1/sources/{source_id}`.
+- Pytest tests for validation, import, rollback, CLI safety and API contracts.
+- Source review ledger, no-scraping ADR and acceptance report.
 
-## Install (PowerShell)
+**Important:** these are registry records, **not** a complete, citizen-ready scheme
+knowledge base. Every scheme status is `unknown`, `Scheme.last_verified_at` is null,
+`publish_ready=false`, and there are **zero machine-verified eligibility rules**. A source's
+reviewed date means the official *link identity* was checked—not that benefits, deadlines,
+operational status or complete eligibility were verified. Read
+[`data/seed/README.md`](data/seed/README.md) and
+[`STAGE-2-SOURCE-LEDGER.md`](docs/architecture/STAGE-2-SOURCE-LEDGER.md).
+
+## Install (Windows PowerShell)
+
+From the repository root:
 
 ```powershell
 cd backend
@@ -30,56 +40,64 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-Use this checkout's virtual environment rather than one from an earlier YojanaMitra version.
-For future local PostgreSQL support, install `python -m pip install -e ".[dev,postgres]"`
-and set `YOJANAMITRA_DATABASE_URL` to a `postgresql+psycopg://...` URL. That path is **not**
-needed for Stage 1's SQLite acceptance gate.
+If you already have the Stage 1 virtual environment, reinstall the editable package from
+the current checkout: `python -m pip install -e ".[dev]"`. Use `python -m ruff` to avoid
+Windows PATH issues. The core dependencies include `tzdata` so `Asia/Kolkata` works
+on Windows and other environments without an OS timezone database. If you already installed
+Stage 2 before this fix, rerun `python -m pip install -e ".[dev]"`. Optional PostgreSQL driver:
+`python -m pip install -e ".[dev,postgres]"`.
 
-## Test each layer
+## Test each layer before combining them
 
-Run from `backend/`:
-
-```powershell
-python -m pytest tests/test_domain_schemas.py
-python -m pytest tests/test_database.py
-python -m pytest tests/test_demo_cli.py
-python -m pytest tests/test_schemes_api.py
-python -m pytest
-```
-
-Or from repository root:
+From `backend/`:
 
 ```powershell
-python -m pytest
-```
-
-Both paths are configured to import this checkout, not a stale editable install.
-
-## Run the API and sample data
-
-From `backend/` in the active virtual environment:
-
-```powershell
-python -m alembic upgrade head
-python -m yojanamitra.cli seed-demo
+python -m pytest tests/test_seed_registry.py -q  # Stage 2 registry/service/API
+python -m pytest -q                            # Stage 0–2 regression suite
+python -m yojanamitra.cli validate-seed         # Offline schema + provenance checks
+python -m alembic upgrade head                 # Reuse Stage 1 migration
+python -m yojanamitra.cli seed-registry         # DRY RUN, no database write
+python -m yojanamitra.cli seed-registry --apply # Explicit local import
+python -m yojanamitra.cli seed-registry --apply # Idempotency: zero inserts
 python -m uvicorn yojanamitra.main:app --reload
 ```
 
-In another PowerShell terminal:
+`validate-seed` returns the following counts for the supplied corpus:
+
+```json
+{
+  "schemes": 20,
+  "sources": 21,
+  "primary_source_schemes": 20,
+  "rules": 0,
+  "publish_ready": 0
+}
+```
+
+From another PowerShell terminal:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
-Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes
+Invoke-RestMethod 'http://127.0.0.1:8000/api/v1/schemes?category=education'
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes/pm-kisan
 ```
 
-The sample is labeled **NOT A GOVERNMENT SCHEME** and its source is **NOT OFFICIAL**. It is
-only for testing the data flow. The scheme response has `status: "unknown"`. Try a missing ID
-(`nonexistent`) and check that it returns HTTP 404. API docs: <http://127.0.0.1:8000/docs>.
+Fetch a source's UUID from the scheme detail response and query
+`/api/v1/sources/{source_id}`. The active-only filter returns an empty list because this
+stage has not verified operational status. Swagger UI: <http://127.0.0.1:8000/docs>.
 
-Do not call `Base.metadata.create_all()` against your application DB: use `alembic upgrade
-head` so schema history is retained. Tests use isolated temporary databases.
+The old synthetic sample remains available only by explicit ID for Stage 1 testing, and
+is excluded from the scheme listing.
 
-## Quality gate before committing
+### Reset an existing Stage 1 local database?
+
+**No reset is necessary.** `alembic upgrade head` will reuse Stage 1's existing schema.
+The importer does not delete or overwrite your records. If there is a conflicting real
+scheme ID/source, it rejects the operation and rolls back; reconcile it manually. There
+is no Stage 2 schema migration.
+
+## Quality gate
 
 ```powershell
 python -m ruff check .
@@ -88,9 +106,14 @@ python -m mypy src
 python -m pytest
 ```
 
-All Python functions and methods need meaningful docstrings. Test output and limitations are
-recorded in [`STAGE-1-ACCEPTANCE.md`](docs/architecture/STAGE-1-ACCEPTANCE.md).
+All methods/functions need docstrings and non-obvious logic needs concise comments. Do
+not mark Ruff/mypy or PostgreSQL as passed without running those tools locally.
+The acceptance report records the known limitations:
+[`docs/architecture/STAGE-2-ACCEPTANCE.md`](docs/architecture/STAGE-2-ACCEPTANCE.md).
 
-No LLM, eligibility evaluation, real scheme records, document ingestion, Qdrant, or frontend
-features have been added. Stage 2 is the **official source registry and ~20 manually verified
-Central Government seed schemes**.
+## Next stages
+
+Stage 3 reviews access rights then implements authorized downloads, MIME/hash validation,
+PDF/HTML parsing and source-version metadata; Stage 4 adds chunking. Neither has been
+implemented here. See [the delivery plan](PROJECT_DELIVERY_PLAN.md) and
+[the task tracker](TASK_TRACKER.md).

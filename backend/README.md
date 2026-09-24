@@ -1,21 +1,18 @@
-# YojanaMitra Backend
+# Backend — Stage 2
 
-FastAPI backend package for YojanaMitra. See the repository-level `README.md`
-for setup, testing, and the staged delivery process.
+Run the backend from this directory after `python -m pip install -e ".[dev]"`.
 
-Install with `python -m pip install -e ".[dev]"` from this directory. Run
-`python -m pytest` here, or from the repository root; both invocations load
-this checkout instead of an older installed `yojanamitra` package.
+The Stage 2 registry is in `../data/seed/central_schemes.json` and imports **offline**.
 
-
-Stage 1 adds typed domain contracts and Alembic-managed persistence. From `backend/`:
-
-```bash
+```powershell
+python -m pytest tests/test_seed_registry.py -q
+python -m pytest -q
 python -m alembic upgrade head
-python -m yojanamitra.cli seed-demo
+python -m yojanamitra.cli validate-seed
+python -m yojanamitra.cli seed-registry        # dry run
+python -m yojanamitra.cli seed-registry --apply # explicit local insert
 python -m uvicorn yojanamitra.main:app --reload
 ```
 
-Test `GET http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme`.
-The fixture is **synthetic**, not a government scheme. Schema and migration tests use
-isolated SQLite databases; no PostgreSQL server is required at this stage.
+`/api/v1/schemes` lists reviewed identities, not confirmed active schemes. Source records
+expose review method/date and do not assert substantive scheme facts. Do not scrape myScheme.

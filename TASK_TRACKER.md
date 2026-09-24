@@ -41,18 +41,25 @@ PostgreSQL and static-analysis gates remain explicitly pending; run the document
 commands before committing and report any failures rather than assuming they passed.
 
 ## Stage 2 — Official Source Registry and Seed Dataset
-- [ ] Select ~20 Central Government schemes
-- [ ] Manually verify official sources
-- [ ] Record ministry/category/beneficiary metadata
-- [ ] Record last verified date
-- [ ] Record source authority/type
-- [ ] Add structured rules only where confidently verified
-- [ ] Add seed loader
-- [ ] Add dataset validator
-- [ ] Add ADR-004 no myScheme scraping
-- [ ] Review every seed record manually
+- [x] Select 20 Central Government scheme identities
+- [x] Review 21 source identities on official government/authority sites
+- [x] Record ministry/category/beneficiary metadata (identity scope only)
+- [x] Record registry review calendar date and method per source
+- [x] Record source authority/type/tier and provenance scope
+- [x] Add no partial rules that could be mistaken for full verified eligibility
+- [x] Add conflict-rejecting and idempotent seed loader (explicit `--apply`)
+- [x] Add offline dataset and URL validator
+- [x] Add ADR-004 no myScheme scraping
+- [x] Review every seed record's identity/source and document review method
+- [x] Add list/filter and source lookup endpoints
+- [x] Add endpoint, CLI and rollback regression tests
+- [ ] Stage 3: verify document permissions, current content, rules, deadlines and status
+- [ ] Local gate: run Ruff, mypy and live PostgreSQL before merging if required
 
-**Stage 2 gate:** every scheme has an authoritative source and validation status.
+**Stage 2 gate:** all 20 records have at least one identified primary official source,
+explicit verification scope/date, status=unknown and publish_ready=false. The offline
+validator, idempotent/atomic importer and read-only endpoints are tested. This does
+**not** certify that complete scheme facts or public eligibility advice are ready.
 
 ## Stage 3 — Document Acquisition and Parsing
 - [ ] Implement source download/fetch function

@@ -1,7 +1,9 @@
 """Small, explicit local demo-data command for Stage 1 verification."""
 
 import argparse
+import json
 import uuid
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
@@ -11,6 +13,8 @@ from yojanamitra.models import Scheme, Source
 from yojanamitra.models.enums import SchemeScope, SourceTier, SourceType
 from yojanamitra.repositories.schemes import add_scheme, add_source, get_scheme_by_id
 from yojanamitra.schemas.domain import SchemeCreate, SourceCreate
+from yojanamitra.services.seed_loader import seed_registry
+from yojanamitra.services.seed_registry import DEFAULT_SEED_PATH, load_manifest, manifest_summary
 
 DEMO_SCHEME_ID = "stage1-demo-scheme"
 DEMO_SOURCE_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
@@ -62,14 +66,45 @@ def seed_demo() -> None:
     print(f"Seeded synthetic demo only: {DEMO_SCHEME_ID}")
 
 
-def main() -> None:
-    """Parse the narrow Stage 1 demo command and execute it."""
+def validate_seed(path: Path = DEFAULT_SEED_PATH) -> dict[str, object]:
+    """Validate the entire official-source manifest offline and print its coverage."""
 
-    parser = argparse.ArgumentParser(description="Stage 1 local data helper")
-    parser.add_argument("action", choices=["seed-demo"])
+    summary = manifest_summary(load_manifest(path))
+    print(json.dumps(summary, indent=2))
+    return summary
+
+
+def seed_official(path: Path = DEFAULT_SEED_PATH, *, apply: bool = False) -> dict[str, int] | None:
+    """Review or atomically import seed records in an explicitly non-production environment."""
+
+    manifest = load_manifest(path)
+    print(json.dumps(manifest_summary(manifest), indent=2))
+    if not apply:
+        print("Dry run only. Pass --apply to write the reviewed registry to the database.")
+        return None
+    settings = get_settings()
+    if settings.environment not in {"local", "test", "development"}:
+        raise RuntimeError("Official seed importing is disabled in staging/production")
+    with Session(get_engine()) as session, session.begin():
+        counts = seed_registry(session, manifest)
+    print(json.dumps(counts, indent=2))
+    return counts
+
+
+def main() -> None:
+    """Run one explicit Stage 1/2 data command from the terminal."""
+
+    parser = argparse.ArgumentParser(description="YojanaMitra local data helpers")
+    parser.add_argument("action", choices=["seed-demo", "validate-seed", "seed-registry"])
+    parser.add_argument("--path", type=Path, default=DEFAULT_SEED_PATH)
+    parser.add_argument("--apply", action="store_true", help="Explicitly write registry records")
     args = parser.parse_args()
     if args.action == "seed-demo":
         seed_demo()
+    elif args.action == "validate-seed":
+        validate_seed(args.path)
+    else:
+        seed_official(args.path, apply=args.apply)
 
 
 if __name__ == "__main__":

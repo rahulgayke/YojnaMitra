@@ -1,0 +1,1983 @@
+diff --git a/README.md b/README.md
+index 149d0df..1883f63 100644
+--- a/README.md
++++ b/README.md
+@@ -1,27 +1,37 @@
+-# YojanaMitra — Stage 1 (Structured Domain Model)
++# YojanaMitra — Stage 2: Official Source Registry
+ 
+-An open-source, incrementally tested Indian government-scheme advisor. The core product rule
+-is: **the LLM coordinates and explains; deterministic systems decide; official evidence
+-grounds claims.** Stage 1 introduces structure only; no verified schemes or eligibility
+-results are provided yet.
++A layered, open-source government-scheme advisor for Indian citizens. The key product
++principle remains: **the LLM coordinates and explains; deterministic systems make
++deterministic decisions; official evidence grounds factual claims.**
+ 
+-The corrected Stage 0 health API and source-resolution safeguard are preserved. See
+-[`PROJECT_DELIVERY_PLAN.md`](PROJECT_DELIVERY_PLAN.md),
+-[`TASK_TRACKER.md`](TASK_TRACKER.md) and
+-[`docs/architecture/STAGE-1-DATA-MODEL.md`](docs/architecture/STAGE-1-DATA-MODEL.md).
++Stage 2 extends the **corrected Stage 0 + Stage 1 repository**. It does not begin the RAG,
++LLM, eligibility engine or frontend. The frontend remains a separate future Next.js app.
+ 
+-## What you get
++## What Stage 2 adds
+ 
+-- Six typed ORM entities and strict Pydantic input/output contracts.
+-- Migration-managed local persistence using SQLAlchemy and Alembic.
+-- SQLite by default so Stage 1 can be tested without Docker; an optional PostgreSQL driver
+-  and database URL for the planned production data layer.
+-- `GET /api/v1/schemes/{scheme_id}` returning stored metadata and sources.
+-- Synthetic-only, idempotent CLI test fixture; it cannot seed production settings.
+-- Isolated model/schema/migration/API tests and mandatory function/method docstrings.
+-- `frontend/` remains a separate future Next.js application boundary.
++- 20 curated Central Government scheme identities spanning agriculture, energy, housing,
++  healthcare, women's welfare, artisans, livelihoods, finance, education and social security.
++- 21 linked official-source records, including a secondary government announcement for
++  PM SVANidhi. Source authority, URL, tier, identity-review method and calendar date retained.
++- Offline strict JSON validation, host-safety controls, duplicate detection, and provenance
++  labels; no automatic source fetching or myScheme scraping.
++- Atomic/idempotent import with stable source IDs and conflict rejection.
++- `GET /api/v1/schemes` (pagination/category/status filtering), existing scheme detail,
++  and `GET /api/v1/sources/{source_id}`.
++- Pytest tests for validation, import, rollback, CLI safety and API contracts.
++- Source review ledger, no-scraping ADR and acceptance report.
+ 
+-## Install (PowerShell)
++**Important:** these are registry records, **not** a complete, citizen-ready scheme
++knowledge base. Every scheme status is `unknown`, `Scheme.last_verified_at` is null,
++`publish_ready=false`, and there are **zero machine-verified eligibility rules**. A source's
++reviewed date means the official *link identity* was checked—not that benefits, deadlines,
++operational status or complete eligibility were verified. Read
++[`data/seed/README.md`](data/seed/README.md) and
++[`STAGE-2-SOURCE-LEDGER.md`](docs/architecture/STAGE-2-SOURCE-LEDGER.md).
++
++## Install (Windows PowerShell)
++
++From the repository root:
+ 
+ ```powershell
+ cd backend
+@@ -30,56 +40,62 @@ python -m venv .venv
+ python -m pip install -e ".[dev]"
+ ```
+ 
+-Use this checkout's virtual environment rather than one from an earlier YojanaMitra version.
+-For future local PostgreSQL support, install `python -m pip install -e ".[dev,postgres]"`
+-and set `YOJANAMITRA_DATABASE_URL` to a `postgresql+psycopg://...` URL. That path is **not**
+-needed for Stage 1's SQLite acceptance gate.
++If you already have the Stage 1 virtual environment, reinstall the editable package from
++the current checkout: `python -m pip install -e ".[dev]"`. Use `python -m ruff` to avoid
++Windows PATH issues. Optional development PostgreSQL driver:
++`python -m pip install -e ".[dev,postgres]"`.
+ 
+-## Test each layer
++## Test each layer before combining them
+ 
+-Run from `backend/`:
++From `backend/`:
+ 
+ ```powershell
+-python -m pytest tests/test_domain_schemas.py
+-python -m pytest tests/test_database.py
+-python -m pytest tests/test_demo_cli.py
+-python -m pytest tests/test_schemes_api.py
+-python -m pytest
++python -m pytest tests/test_seed_registry.py -q  # Stage 2 registry/service/API
++python -m pytest -q                            # Stage 0–2 regression suite
++python -m yojanamitra.cli validate-seed         # Offline schema + provenance checks
++python -m alembic upgrade head                 # Reuse Stage 1 migration
++python -m yojanamitra.cli seed-registry         # DRY RUN, no database write
++python -m yojanamitra.cli seed-registry --apply # Explicit local import
++python -m yojanamitra.cli seed-registry --apply # Idempotency: zero inserts
++python -m uvicorn yojanamitra.main:app --reload
+ ```
+ 
+-Or from repository root:
++`validate-seed` returns the following counts for the supplied corpus:
+ 
+-```powershell
+-python -m pytest
++```json
++{
++  "schemes": 20,
++  "sources": 21,
++  "primary_source_schemes": 20,
++  "rules": 0,
++  "publish_ready": 0
++}
+ ```
+ 
+-Both paths are configured to import this checkout, not a stale editable install.
+-
+-## Run the API and sample data
+-
+-From `backend/` in the active virtual environment:
++From another PowerShell terminal:
+ 
+ ```powershell
+-python -m alembic upgrade head
+-python -m yojanamitra.cli seed-demo
+-python -m uvicorn yojanamitra.main:app --reload
++Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
++Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes
++Invoke-RestMethod 'http://127.0.0.1:8000/api/v1/schemes?category=education'
++Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes/pm-kisan
+ ```
+ 
+-In another PowerShell terminal:
++Fetch a source's UUID from the scheme detail response and query
++`/api/v1/sources/{source_id}`. The active-only filter returns an empty list because this
++stage has not verified operational status. Swagger UI: <http://127.0.0.1:8000/docs>.
+ 
+-```powershell
+-Invoke-RestMethod http://127.0.0.1:8000/api/v1/health
+-Invoke-RestMethod http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme
+-```
++The old synthetic sample remains available only by explicit ID for Stage 1 testing, and
++is excluded from the scheme listing.
+ 
+-The sample is labeled **NOT A GOVERNMENT SCHEME** and its source is **NOT OFFICIAL**. It is
+-only for testing the data flow. The scheme response has `status: "unknown"`. Try a missing ID
+-(`nonexistent`) and check that it returns HTTP 404. API docs: <http://127.0.0.1:8000/docs>.
++### Reset an existing Stage 1 local database?
+ 
+-Do not call `Base.metadata.create_all()` against your application DB: use `alembic upgrade
+-head` so schema history is retained. Tests use isolated temporary databases.
++**No reset is necessary.** `alembic upgrade head` will reuse Stage 1's existing schema.
++The importer does not delete or overwrite your records. If there is a conflicting real
++scheme ID/source, it rejects the operation and rolls back; reconcile it manually. There
++is no Stage 2 schema migration.
+ 
+-## Quality gate before committing
++## Quality gate
+ 
+ ```powershell
+ python -m ruff check .
+@@ -88,9 +104,14 @@ python -m mypy src
+ python -m pytest
+ ```
+ 
+-All Python functions and methods need meaningful docstrings. Test output and limitations are
+-recorded in [`STAGE-1-ACCEPTANCE.md`](docs/architecture/STAGE-1-ACCEPTANCE.md).
++All methods/functions need docstrings and non-obvious logic needs concise comments. Do
++not mark Ruff/mypy or PostgreSQL as passed without running those tools locally.
++The acceptance report records the known limitations:
++[`docs/architecture/STAGE-2-ACCEPTANCE.md`](docs/architecture/STAGE-2-ACCEPTANCE.md).
++
++## Next stages
+ 
+-No LLM, eligibility evaluation, real scheme records, document ingestion, Qdrant, or frontend
+-features have been added. Stage 2 is the **official source registry and ~20 manually verified
+-Central Government seed schemes**.
++Stage 3 reviews access rights then implements authorized downloads, MIME/hash validation,
++PDF/HTML parsing and source-version metadata; Stage 4 adds chunking. Neither has been
++implemented here. See [the delivery plan](PROJECT_DELIVERY_PLAN.md) and
++[the task tracker](TASK_TRACKER.md).
+diff --git a/TASK_TRACKER.md b/TASK_TRACKER.md
+index 6084881..9525cb4 100644
+--- a/TASK_TRACKER.md
++++ b/TASK_TRACKER.md
+@@ -41,18 +41,25 @@ PostgreSQL and static-analysis gates remain explicitly pending; run the document
+ commands before committing and report any failures rather than assuming they passed.
+ 
+ ## Stage 2 — Official Source Registry and Seed Dataset
+-- [ ] Select ~20 Central Government schemes
+-- [ ] Manually verify official sources
+-- [ ] Record ministry/category/beneficiary metadata
+-- [ ] Record last verified date
+-- [ ] Record source authority/type
+-- [ ] Add structured rules only where confidently verified
+-- [ ] Add seed loader
+-- [ ] Add dataset validator
+-- [ ] Add ADR-004 no myScheme scraping
+-- [ ] Review every seed record manually
+-
+-**Stage 2 gate:** every scheme has an authoritative source and validation status.
++- [x] Select 20 Central Government scheme identities
++- [x] Review 21 source identities on official government/authority sites
++- [x] Record ministry/category/beneficiary metadata (identity scope only)
++- [x] Record registry review calendar date and method per source
++- [x] Record source authority/type/tier and provenance scope
++- [x] Add no partial rules that could be mistaken for full verified eligibility
++- [x] Add conflict-rejecting and idempotent seed loader (explicit `--apply`)
++- [x] Add offline dataset and URL validator
++- [x] Add ADR-004 no myScheme scraping
++- [x] Review every seed record's identity/source and document review method
++- [x] Add list/filter and source lookup endpoints
++- [x] Add endpoint, CLI and rollback regression tests
++- [ ] Stage 3: verify document permissions, current content, rules, deadlines and status
++- [ ] Local gate: run Ruff, mypy and live PostgreSQL before merging if required
++
++**Stage 2 gate:** all 20 records have at least one identified primary official source,
++explicit verification scope/date, status=unknown and publish_ready=false. The offline
++validator, idempotent/atomic importer and read-only endpoints are tested. This does
++**not** certify that complete scheme facts or public eligibility advice are ready.
+ 
+ ## Stage 3 — Document Acquisition and Parsing
+ - [ ] Implement source download/fetch function
+diff --git a/backend/README.md b/backend/README.md
+index 9098000..e4b41fa 100644
+--- a/backend/README.md
++++ b/backend/README.md
+@@ -1,21 +1,18 @@
+-# YojanaMitra Backend
++# Backend — Stage 2
+ 
+-FastAPI backend package for YojanaMitra. See the repository-level `README.md`
+-for setup, testing, and the staged delivery process.
++Run the backend from this directory after `python -m pip install -e ".[dev]"`.
+ 
+-Install with `python -m pip install -e ".[dev]"` from this directory. Run
+-`python -m pytest` here, or from the repository root; both invocations load
+-this checkout instead of an older installed `yojanamitra` package.
++The Stage 2 registry is in `../data/seed/central_schemes.json` and imports **offline**.
+ 
+-
+-Stage 1 adds typed domain contracts and Alembic-managed persistence. From `backend/`:
+-
+-```bash
++```powershell
++python -m pytest tests/test_seed_registry.py -q
++python -m pytest -q
+ python -m alembic upgrade head
+-python -m yojanamitra.cli seed-demo
++python -m yojanamitra.cli validate-seed
++python -m yojanamitra.cli seed-registry        # dry run
++python -m yojanamitra.cli seed-registry --apply # explicit local insert
+ python -m uvicorn yojanamitra.main:app --reload
+ ```
+ 
+-Test `GET http://127.0.0.1:8000/api/v1/schemes/stage1-demo-scheme`.
+-The fixture is **synthetic**, not a government scheme. Schema and migration tests use
+-isolated SQLite databases; no PostgreSQL server is required at this stage.
++`/api/v1/schemes` lists reviewed identities, not confirmed active schemes. Source records
++expose review method/date and do not assert substantive scheme facts. Do not scrape myScheme.
+diff --git a/backend/src/yojanamitra/api/router.py b/backend/src/yojanamitra/api/router.py
+index 266a3d6..5b6aa09 100644
+--- a/backend/src/yojanamitra/api/router.py
++++ b/backend/src/yojanamitra/api/router.py
+@@ -4,7 +4,9 @@ from fastapi import APIRouter
+ 
+ from yojanamitra.api.routes.health import router as health_router
+ from yojanamitra.api.routes.schemes import router as schemes_router
++from yojanamitra.api.routes.sources import router as sources_router
+ 
+ api_router = APIRouter()
+ api_router.include_router(health_router)
+ api_router.include_router(schemes_router)
++api_router.include_router(sources_router)
+diff --git a/backend/src/yojanamitra/api/routes/schemes.py b/backend/src/yojanamitra/api/routes/schemes.py
+index 5c18fc5..b6d8fa4 100644
+--- a/backend/src/yojanamitra/api/routes/schemes.py
++++ b/backend/src/yojanamitra/api/routes/schemes.py
+@@ -2,11 +2,12 @@
+ 
+ from typing import Annotated
+ 
+-from fastapi import APIRouter, Depends, HTTPException
++from fastapi import APIRouter, Depends, HTTPException, Query
+ from sqlalchemy.orm import Session
+ 
+ from yojanamitra.db.session import get_db_session
+-from yojanamitra.repositories.schemes import get_scheme_by_id
++from yojanamitra.models.enums import SchemeStatus
++from yojanamitra.repositories.schemes import get_scheme_by_id, list_official_schemes
+ from yojanamitra.schemas.domain import SchemeRead, Slug
+ 
+ router = APIRouter(prefix="/schemes", tags=["schemes"])
+@@ -21,3 +22,19 @@ def read_scheme(scheme_id: Slug, session: DatabaseSession) -> SchemeRead:
+     if scheme is None:
+         raise HTTPException(status_code=404, detail="Scheme not found")
+     return SchemeRead.model_validate(scheme)
++
++
++@router.get("", response_model=list[SchemeRead], summary="List registered Central schemes")
++def read_schemes(
++    session: DatabaseSession,
++    category: Annotated[str | None, Query(min_length=2, max_length=80)] = None,
++    status: SchemeStatus | None = None,
++    limit: Annotated[int, Query(ge=1, le=100)] = 50,
++    offset: Annotated[int, Query(ge=0)] = 0,
++) -> list[SchemeRead]:
++    """Return paginated registry metadata without inferring operational scheme status."""
++
++    schemes = list_official_schemes(
++        session, category=category, status=status, limit=limit, offset=offset
++    )
++    return [SchemeRead.model_validate(scheme) for scheme in schemes]
+diff --git a/backend/src/yojanamitra/api/routes/sources.py b/backend/src/yojanamitra/api/routes/sources.py
+new file mode 100644
+index 0000000..e572218
+--- /dev/null
++++ b/backend/src/yojanamitra/api/routes/sources.py
+@@ -0,0 +1,24 @@
++"""Read-only official-source lookup with explicit provenance metadata."""
++
++from typing import Annotated
++from uuid import UUID
++
++from fastapi import APIRouter, Depends, HTTPException
++from sqlalchemy.orm import Session
++
++from yojanamitra.db.session import get_db_session
++from yojanamitra.models import Source
++from yojanamitra.schemas.domain import SourceRead
++
++router = APIRouter(prefix="/sources", tags=["sources"])
++DatabaseSession = Annotated[Session, Depends(get_db_session)]
++
++
++@router.get("/{source_id}", response_model=SourceRead, summary="Get registered official source")
++def read_source(source_id: UUID, session: DatabaseSession) -> SourceRead:
++    """Retrieve a source record or return an explicit HTTP 404."""
++
++    source = session.get(Source, source_id)
++    if source is None:
++        raise HTTPException(status_code=404, detail="Source not found")
++    return SourceRead.model_validate(source)
+diff --git a/backend/src/yojanamitra/cli.py b/backend/src/yojanamitra/cli.py
+index abb041d..1199cf4 100644
+--- a/backend/src/yojanamitra/cli.py
++++ b/backend/src/yojanamitra/cli.py
+@@ -1,7 +1,9 @@
+ """Small, explicit local demo-data command for Stage 1 verification."""
+ 
+ import argparse
++import json
+ import uuid
++from pathlib import Path
+ 
+ from sqlalchemy.orm import Session
+ 
+@@ -11,6 +13,8 @@ from yojanamitra.models import Scheme, Source
+ from yojanamitra.models.enums import SchemeScope, SourceTier, SourceType
+ from yojanamitra.repositories.schemes import add_scheme, add_source, get_scheme_by_id
+ from yojanamitra.schemas.domain import SchemeCreate, SourceCreate
++from yojanamitra.services.seed_loader import seed_registry
++from yojanamitra.services.seed_registry import DEFAULT_SEED_PATH, load_manifest, manifest_summary
+ 
+ DEMO_SCHEME_ID = "stage1-demo-scheme"
+ DEMO_SOURCE_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+@@ -62,14 +66,45 @@ def seed_demo() -> None:
+     print(f"Seeded synthetic demo only: {DEMO_SCHEME_ID}")
+ 
+ 
++def validate_seed(path: Path = DEFAULT_SEED_PATH) -> dict[str, object]:
++    """Validate the entire official-source manifest offline and print its coverage."""
++
++    summary = manifest_summary(load_manifest(path))
++    print(json.dumps(summary, indent=2))
++    return summary
++
++
++def seed_official(path: Path = DEFAULT_SEED_PATH, *, apply: bool = False) -> dict[str, int] | None:
++    """Review or atomically import seed records in an explicitly non-production environment."""
++
++    manifest = load_manifest(path)
++    print(json.dumps(manifest_summary(manifest), indent=2))
++    if not apply:
++        print("Dry run only. Pass --apply to write the reviewed registry to the database.")
++        return None
++    settings = get_settings()
++    if settings.environment not in {"local", "test", "development"}:
++        raise RuntimeError("Official seed importing is disabled in staging/production")
++    with Session(get_engine()) as session, session.begin():
++        counts = seed_registry(session, manifest)
++    print(json.dumps(counts, indent=2))
++    return counts
++
++
+ def main() -> None:
+-    """Parse the narrow Stage 1 demo command and execute it."""
++    """Run one explicit Stage 1/2 data command from the terminal."""
+ 
+-    parser = argparse.ArgumentParser(description="Stage 1 local data helper")
+-    parser.add_argument("action", choices=["seed-demo"])
++    parser = argparse.ArgumentParser(description="YojanaMitra local data helpers")
++    parser.add_argument("action", choices=["seed-demo", "validate-seed", "seed-registry"])
++    parser.add_argument("--path", type=Path, default=DEFAULT_SEED_PATH)
++    parser.add_argument("--apply", action="store_true", help="Explicitly write registry records")
+     args = parser.parse_args()
+     if args.action == "seed-demo":
+         seed_demo()
++    elif args.action == "validate-seed":
++        validate_seed(args.path)
++    else:
++        seed_official(args.path, apply=args.apply)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/backend/src/yojanamitra/repositories/schemes.py b/backend/src/yojanamitra/repositories/schemes.py
+index 8fd1943..31af071 100644
+--- a/backend/src/yojanamitra/repositories/schemes.py
++++ b/backend/src/yojanamitra/repositories/schemes.py
+@@ -4,6 +4,7 @@ from sqlalchemy import select
+ from sqlalchemy.orm import Session, selectinload
+ 
+ from yojanamitra.models import Scheme, Source
++from yojanamitra.models.enums import SchemeStatus
+ 
+ 
+ def get_scheme_by_id(session: Session, scheme_id: str) -> Scheme | None:
+@@ -27,3 +28,27 @@ def add_source(session: Session, source: Source) -> Source:
+     session.add(source)
+     session.flush()
+     return source
++
++
++def list_official_schemes(
++    session: Session,
++    *,
++    category: str | None = None,
++    status: SchemeStatus | None = None,
++    limit: int = 50,
++    offset: int = 0,
++) -> list[Scheme]:
++    """List real registry records without exposing the synthetic Stage 1 fixture."""
++
++    # A test fixture must never surface as a real citizen-facing search result.
++    statement = (
++        select(Scheme)
++        .options(selectinload(Scheme.sources))
++        .where(Scheme.category != "test_only")
++        .order_by(Scheme.id)
++    )
++    if category is not None:
++        statement = statement.where(Scheme.category == category)
++    if status is not None:
++        statement = statement.where(Scheme.status == status)
++    return list(session.scalars(statement.offset(offset).limit(limit)).all())
+diff --git a/backend/src/yojanamitra/services/__init__.py b/backend/src/yojanamitra/services/__init__.py
+new file mode 100644
+index 0000000..259c446
+--- /dev/null
++++ b/backend/src/yojanamitra/services/__init__.py
+@@ -0,0 +1 @@
++"""Small, independently testable application services."""
+diff --git a/backend/src/yojanamitra/services/seed_loader.py b/backend/src/yojanamitra/services/seed_loader.py
+new file mode 100644
+index 0000000..536a477
+--- /dev/null
++++ b/backend/src/yojanamitra/services/seed_loader.py
+@@ -0,0 +1,107 @@
++"""Import the validated local registry without scraping or overwriting user data."""
++
++from __future__ import annotations
++
++import uuid
++from datetime import datetime, time
++
++from sqlalchemy.orm import Session
++
++from yojanamitra.models import Scheme, Source
++from yojanamitra.repositories.schemes import get_scheme_by_id
++from yojanamitra.services.seed_registry import INDIA_TIMEZONE, SeedManifest
++
++# Stable IDs make retries idempotent without depending on a separate migration.
++SEED_NAMESPACE = uuid.UUID("606d7735-9478-42ca-a94c-d7f10bd08c39")
++
++
++class SeedConflictError(ValueError):
++    """Signal that an existing record differs from the curated seed manifest."""
++
++
++def source_identifier(scheme_id: str, url: str) -> uuid.UUID:
++    """Derive the same source UUID for every import of a given scheme and URL."""
++
++    return uuid.uuid5(SEED_NAMESPACE, f"{scheme_id}:{url}")
++
++
++def seed_registry(session: Session, manifest: SeedManifest) -> dict[str, int]:
++    """Insert missing seed schemes/sources, rejecting conflicting existing records.
++
++    The caller owns transaction commit or rollback. All validation is completed
++    before invoking this function; it does not perform HTTP downloads.
++    """
++
++    counts = {"schemes_created": 0, "sources_created": 0, "unchanged_schemes": 0}
++    for entry in manifest.entries:
++        payload = entry.scheme
++        existing = get_scheme_by_id(session, payload.id)
++        if existing is None:
++            session.add(
++                Scheme(
++                    **payload.model_dump(exclude={"metadata"}),
++                    extra_metadata=payload.metadata,
++                )
++            )
++            session.flush()
++            counts["schemes_created"] += 1
++        else:
++            # No overwrite: curated seed changes need an explicit version/review workflow.
++            if (
++                existing.name != payload.name
++                or existing.category != payload.category
++                or existing.scope != payload.scope
++                or existing.status != payload.status
++                or existing.extra_metadata != payload.metadata
++                or existing.ministry != payload.ministry
++                or existing.short_name != payload.short_name
++            ):
++                raise SeedConflictError(f"Existing scheme differs from reviewed seed: {payload.id}")
++            counts["unchanged_schemes"] += 1
++        for source_record in entry.sources:
++            source_id = source_identifier(payload.id, source_record.url)
++            # The verification timestamp has *day* precision, not event precision.
++            review_time = datetime.combine(source_record.reviewed_on, time.min, INDIA_TIMEZONE)
++            metadata = {
++                "reviewed_on": source_record.reviewed_on.isoformat(),
++                "verification_method": source_record.verification_method,
++                "verification_scope": source_record.verification_scope,
++                "content_review_status": source_record.content_review_status,
++                "acquisition_policy": source_record.acquisition_policy,
++                "timestamp_precision": "calendar_day_ist",
++            }
++            matching = session.get(Source, source_id)
++            if matching is not None:
++                if (
++                    matching.scheme_id != payload.id
++                    or matching.url != source_record.url
++                    or matching.title != source_record.title
++                    or matching.authority != source_record.authority
++                    or matching.source_type != source_record.source_type
++                    or matching.tier != source_record.tier
++                    or matching.authority_score != source_record.authority_score
++                    or matching.is_official != source_record.is_official
++                    or matching.extra_metadata != metadata
++                ):
++                    raise SeedConflictError(
++                        f"Existing source differs from reviewed seed: {source_id}"
++                    )
++                continue
++            session.add(
++                Source(
++                    id=source_id,
++                    scheme_id=payload.id,
++                    title=source_record.title,
++                    url=source_record.url,
++                    authority=source_record.authority,
++                    source_type=source_record.source_type,
++                    tier=source_record.tier,
++                    authority_score=source_record.authority_score,
++                    is_official=source_record.is_official,
++                    last_verified_at=review_time,
++                    extra_metadata=metadata,
++                )
++            )
++            counts["sources_created"] += 1
++        session.flush()
++    return counts
+diff --git a/backend/src/yojanamitra/services/seed_registry.py b/backend/src/yojanamitra/services/seed_registry.py
+new file mode 100644
+index 0000000..54f5d51
+--- /dev/null
++++ b/backend/src/yojanamitra/services/seed_registry.py
+@@ -0,0 +1,172 @@
++"""Validate a human-curated official-source manifest without network access.
++
++This service validates *source identity*, not live scheme status, eligibility,
++benefit amounts, document copyrights, or the suitability of pages for ingestion.
++"""
++
++from __future__ import annotations
++
++import json
++from datetime import date, datetime
++from pathlib import Path
++from typing import Literal
++from urllib.parse import urlsplit
++from zoneinfo import ZoneInfo
++
++from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
++
++from yojanamitra.models.enums import SchemeScope, SchemeStatus, SourceTier, SourceType
++from yojanamitra.schemas.domain import SchemeCreate, SourceCreate
++
++PROJECT_ROOT = Path(__file__).resolve().parents[4]
++DEFAULT_SEED_PATH = PROJECT_ROOT / "data" / "seed" / "central_schemes.json"
++INDIA_TIMEZONE = ZoneInfo("Asia/Kolkata")
++# This non-gov.in authority hosts its own official regulator information.
++EXPLICIT_OFFICIAL_HOSTS = frozenset({"pfrda.org.in", "www.pfrda.org.in"})
++VerificationMethod = Literal["page_read", "search_result_review", "official_portal_reference"]
++AcquisitionPolicy = Literal[
++    "manual_review_required_before_download",
++    "do_not_copy_or_ingest_without_permission_review",
++]
++
++
++class SeedSource(BaseModel):
++    """Represent a reviewed registry link and its narrow verification claim."""
++
++    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
++
++    title: str = Field(min_length=2, max_length=250)
++    url: str = Field(min_length=12, max_length=2048)
++    authority: str = Field(min_length=2, max_length=200)
++    source_type: SourceType
++    tier: SourceTier
++    authority_score: int = Field(ge=0, le=100)
++    is_official: bool
++    reviewed_on: date
++    verification_method: VerificationMethod
++    verification_scope: Literal["government_source_identity_only"]
++    content_review_status: Literal["not_parsed"]
++    acquisition_policy: AcquisitionPolicy
++
++    @model_validator(mode="after")
++    def validate_official_url(self) -> SeedSource:
++        """Reject unsafe and unapproved source URLs before the database is touched."""
++
++        parts = urlsplit(self.url)
++        host = (parts.hostname or "").lower()
++        sanctioned = (
++            host.endswith(".gov.in")
++            or host.endswith(".nic.in")
++            or host in EXPLICIT_OFFICIAL_HOSTS
++        )
++        if (
++            parts.scheme != "https"
++            or not sanctioned
++            or parts.username is not None
++            or parts.password is not None
++            or parts.port is not None
++            or parts.fragment
++        ):
++            raise ValueError("Source must be a plain HTTPS URL on an approved official host")
++        if host == "myscheme.gov.in" or host.endswith(".myscheme.gov.in"):
++            raise ValueError("myScheme is excluded from automated seed ingestion")
++        if self.reviewed_on > datetime.now(INDIA_TIMEZONE).date():
++            raise ValueError("Source registry review date must not be in the future")
++        if not self.is_official:
++            raise ValueError("Stage 2 seed must use identified official sources")
++        # SourceCreate provides the identical typed constraints used by the API layer.
++        SourceCreate.model_validate(
++            {
++                "scheme_id": "validation-only",
++                "title": self.title,
++                "url": self.url,
++                "authority": self.authority,
++                "source_type": self.source_type,
++                "tier": self.tier,
++                "authority_score": self.authority_score,
++                "is_official": self.is_official,
++            }
++        )
++        return self
++
++
++class SeedEntry(BaseModel):
++    """Represent one scheme, at least one official source, and no trusted rules."""
++
++    model_config = ConfigDict(extra="forbid")
++
++    scheme: SchemeCreate
++    sources: list[SeedSource] = Field(min_length=1)
++    eligibility_rules: list[dict[str, object]] = Field(default_factory=list)
++
++    @model_validator(mode="after")
++    def enforce_incomplete_registry_scope(self) -> SeedEntry:
++        """Prevent partially reviewed records being presented as operationally verified."""
++
++        if self.scheme.scope != SchemeScope.CENTRAL or self.scheme.status != SchemeStatus.UNKNOWN:
++            raise ValueError("Seed records must be central with unknown operating status")
++        if self.scheme.last_verified_at is not None:
++            raise ValueError("Scheme-wide verification is not completed in Stage 2")
++        if self.scheme.metadata.get("publish_ready") is not False:
++            raise ValueError("Unreviewed records cannot be marked publish-ready")
++        if self.scheme.metadata.get("eligibility_rule_coverage") != "not_reviewed":
++            raise ValueError("Eligibility rule coverage must be explicitly unreviewed")
++        if (
++            self.scheme.metadata.get("verification_scope")
++            != "scheme_identity_and_source_registry_only"
++        ):
++            raise ValueError("Review scope must be stated explicitly")
++        if self.eligibility_rules:
++            raise ValueError("Do not seed incomplete eligibility rules as machine-verifiable")
++        if not any(source.tier == SourceTier.PRIMARY for source in self.sources):
++            raise ValueError("Every scheme requires a primary government source")
++        return self
++
++
++class SeedManifest(BaseModel):
++    """Represent the entire checked manifest for atomic import."""
++
++    model_config = ConfigDict(extra="forbid")
++    entries: list[SeedEntry]
++
++    @model_validator(mode="after")
++    def check_unique_identity(self) -> SeedManifest:
++        """Reject duplicate scheme IDs and repeated source URLs across the manifest."""
++
++        identifiers = [entry.scheme.id for entry in self.entries]
++        if len(set(identifiers)) != len(identifiers):
++            raise ValueError("Duplicate scheme ID in seed manifest")
++        urls = [source.url for entry in self.entries for source in entry.sources]
++        if len(set(urls)) != len(urls):
++            raise ValueError("Duplicate official source URL in seed manifest")
++        return self
++
++
++def load_manifest(path: Path = DEFAULT_SEED_PATH) -> SeedManifest:
++    """Load and validate local JSON completely before permitting database writes."""
++
++    try:
++        raw = json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as exc:
++        raise ValueError(f"Unable to load seed manifest: {path}") from exc
++    try:
++        return SeedManifest.model_validate({"entries": raw})
++    except ValidationError as exc:
++        raise ValueError(f"Invalid seed manifest: {exc}") from exc
++
++
++def manifest_summary(manifest: SeedManifest) -> dict[str, object]:
++    """Report manifest size and incomplete verification coverage without inference."""
++
++    return {
++        "schemes": len(manifest.entries),
++        "sources": sum(len(entry.sources) for entry in manifest.entries),
++        "primary_source_schemes": sum(
++            any(source.tier == SourceTier.PRIMARY for source in entry.sources)
++            for entry in manifest.entries
++        ),
++        "rules": sum(len(entry.eligibility_rules) for entry in manifest.entries),
++        "publish_ready": sum(
++            bool(entry.scheme.metadata.get("publish_ready")) for entry in manifest.entries
++        ),
++    }
+diff --git a/backend/tests/test_seed_registry.py b/backend/tests/test_seed_registry.py
+new file mode 100644
+index 0000000..972f7a1
+--- /dev/null
++++ b/backend/tests/test_seed_registry.py
+@@ -0,0 +1,250 @@
++"""Safety and integrity tests for the Stage 2 curated source registry."""
++
++from __future__ import annotations
++
++import json
++from collections.abc import Callable, Iterator
++from datetime import date, timedelta
++from pathlib import Path
++
++import pytest
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++from sqlalchemy import Engine, func, select
++from sqlalchemy.orm import Session, sessionmaker
++
++import yojanamitra.cli as cli
++from yojanamitra.api.routes.schemes import get_db_session
++from yojanamitra.core.config import Settings
++from yojanamitra.db.base import Base
++from yojanamitra.db.session import create_database_engine
++from yojanamitra.models import Document, EligibilityRule, Scheme, Source
++from yojanamitra.models.enums import SchemeStatus
++from yojanamitra.services.seed_loader import SeedConflictError, seed_registry
++from yojanamitra.services.seed_registry import DEFAULT_SEED_PATH, load_manifest, manifest_summary
++
++
++@pytest.fixture
++def seed_engine(tmp_path: Path) -> Iterator[Engine]:
++    """Create and dispose of an isolated SQLite database for registry tests."""
++
++    engine = create_database_engine(f"sqlite:///{tmp_path / 'official-registry.db'}")
++    Base.metadata.create_all(engine)
++    yield engine
++    engine.dispose()
++
++
++def _manifest_copy(tmp_path: Path, change: Callable[[list[dict[str, object]]], None]) -> Path:
++    """Create a writable manifest copy and apply one deliberately invalid edit."""
++
++    records = json.loads(DEFAULT_SEED_PATH.read_text(encoding="utf-8"))
++    change(records)
++    path = tmp_path / "changed.json"
++    path.write_text(json.dumps(records), encoding="utf-8")
++    return path
++
++
++def test_seed_has_20_identified_schemes_with_source_review_scope() -> None:
++    """Verify the dataset's declared coverage, not its unreviewed eligibility rules."""
++
++    manifest = load_manifest()
++    assert manifest_summary(manifest) == {
++        "schemes": 20, "sources": 21, "primary_source_schemes": 20,
++        "rules": 0, "publish_ready": 0,
++    }
++    assert all(entry.scheme.status == SchemeStatus.UNKNOWN for entry in manifest.entries)
++    assert all(entry.scheme.last_verified_at is None for entry in manifest.entries)
++    assert all(not entry.eligibility_rules for entry in manifest.entries)
++    assert all(
++        source.verification_scope == "government_source_identity_only"
++        and source.content_review_status == "not_parsed"
++        for entry in manifest.entries for source in entry.sources
++    )
++
++
++@pytest.mark.parametrize(
++    "unsafe_url",
++    [
++        "https://pmkisan.gov.in.evil.example/test",
++        "http://pmkisan.gov.in/",
++        "https://some-shop.co.in/not-official",
++        "https://myscheme.gov.in/",
++        "https://user:secret@pmkisan.gov.in/",
++    ],
++)
++def test_seed_rejects_unapproved_urls(tmp_path: Path, unsafe_url: str) -> None:
++    """Prevent unauthorized, insecure and deceptive source addresses entering the corpus."""
++
++    def change(records: list[dict[str, object]]) -> None:
++        """Replace a curated URL with one unsafe value."""
++
++        records[0]["sources"][0]["url"] = unsafe_url
++
++    with pytest.raises(ValueError, match="Invalid seed manifest"):
++        load_manifest(_manifest_copy(tmp_path, change))
++
++
++def test_duplicate_scheme_and_source_urls_are_rejected(tmp_path: Path) -> None:
++    """Detect repeated scheme IDs and source URLs before database import."""
++
++    def duplicate_scheme(records: list[dict[str, object]]) -> None:
++        """Make two entries claim the same public scheme ID."""
++
++        records[1]["scheme"]["id"] = records[0]["scheme"]["id"]
++
++    def duplicate_source(records: list[dict[str, object]]) -> None:
++        """Make two separate sources point to the same URL."""
++
++        records[1]["sources"][0]["url"] = records[0]["sources"][0]["url"]
++
++    with pytest.raises(ValueError, match="Duplicate scheme ID"):
++        load_manifest(_manifest_copy(tmp_path, duplicate_scheme))
++    with pytest.raises(ValueError, match="Duplicate official source URL"):
++        load_manifest(_manifest_copy(tmp_path, duplicate_source))
++
++
++def test_future_review_or_unverified_active_claim_is_rejected(tmp_path: Path) -> None:
++    """Disallow future timestamps and unsupported operational/publishing claims."""
++
++    def future_date(records: list[dict[str, object]]) -> None:
++        """Make registry review appear to occur tomorrow in India."""
++
++        records[0]["sources"][0]["reviewed_on"] = (date.today() + timedelta(days=3)).isoformat()
++
++    def active_status(records: list[dict[str, object]]) -> None:
++        """Pretend that a registry-only identity check verified scheme operation."""
++
++        records[0]["scheme"]["status"] = "active"
++
++    def publishing(records: list[dict[str, object]]) -> None:
++        """Pretend an unreviewed seed scheme is ready for public advice."""
++
++        records[0]["scheme"]["metadata"]["publish_ready"] = True
++
++    for change in (future_date, active_status, publishing):
++        with pytest.raises(ValueError, match="Invalid seed manifest"):
++            load_manifest(_manifest_copy(tmp_path, change))
++
++
++def test_seed_import_is_idempotent_and_keeps_unknowns(seed_engine: Engine) -> None:
++    """Create 20/21 rows once without fabricating documents, rules or status."""
++
++    manifest = load_manifest()
++    with Session(seed_engine) as session, session.begin():
++        first = seed_registry(session, manifest)
++    with Session(seed_engine) as session, session.begin():
++        second = seed_registry(session, manifest)
++    assert first == {"schemes_created": 20, "sources_created": 21, "unchanged_schemes": 0}
++    assert second == {"schemes_created": 0, "sources_created": 0, "unchanged_schemes": 20}
++    with Session(seed_engine) as session:
++        assert session.scalar(select(func.count()).select_from(Scheme)) == 20
++        assert session.scalar(select(func.count()).select_from(Source)) == 21
++        assert session.scalar(select(func.count()).select_from(Document)) == 0
++        assert session.scalar(select(func.count()).select_from(EligibilityRule)) == 0
++        assert set(session.scalars(select(Scheme.status)).all()) == {SchemeStatus.UNKNOWN}
++        source = session.scalars(select(Source)).first()
++        assert source is not None
++        assert source.extra_metadata["verification_scope"] == "government_source_identity_only"
++        assert source.extra_metadata["timestamp_precision"] == "calendar_day_ist"
++
++
++def test_import_conflict_rolls_back_all_pending_rows(seed_engine: Engine) -> None:
++    """Keep an existing conflicting record and prevent partial imports."""
++
++    with Session(seed_engine) as session, session.begin():
++        session.add(Scheme(id="pm-jay", name="Unrelated local record", category="test"))
++    with Session(seed_engine) as session:
++        with pytest.raises(SeedConflictError):
++            with session.begin():
++                seed_registry(session, load_manifest())
++    with Session(seed_engine) as session:
++        assert session.scalar(select(func.count()).select_from(Scheme)) == 1
++        assert session.scalar(select(func.count()).select_from(Source)) == 0
++        assert session.get(Scheme, "pm-jay").name == "Unrelated local record"
++
++
++def test_source_review_conflict_is_rejected(seed_engine: Engine) -> None:
++    """Never overwrite changed source permissions or provenance during a rerun."""
++
++    manifest = load_manifest()
++    with Session(seed_engine) as session, session.begin():
++        seed_registry(session, manifest)
++    with Session(seed_engine) as session, session.begin():
++        source = session.scalars(select(Source)).first()
++        assert source is not None
++        source.extra_metadata = {**source.extra_metadata, "acquisition_policy": "altered"}
++    with Session(seed_engine) as session:
++        with pytest.raises(SeedConflictError, match="Existing source differs"):
++            with session.begin():
++                seed_registry(session, manifest)
++
++
++def test_seed_cli_dry_run_never_opens_database(monkeypatch: pytest.MonkeyPatch) -> None:
++    """Let citizens' source data be inspected without any database configuration."""
++
++    def database_forbidden() -> None:
++        """Fail if validation unexpectedly creates a database engine."""
++
++        raise AssertionError("Dry run must not use database")
++
++    monkeypatch.setattr(cli, "get_engine", database_forbidden)
++    assert cli.validate_seed()["schemes"] == 20
++    assert cli.seed_official(apply=False) is None
++
++
++def test_seed_cli_rejects_production_import(monkeypatch: pytest.MonkeyPatch) -> None:
++    """Keep an explicit write request from importing into a production setting."""
++
++    def production_settings() -> Settings:
++        """Return a nonlocal environment without connecting anywhere."""
++
++        return Settings(environment="production", _env_file=None)
++
++    monkeypatch.setattr(cli, "get_settings", production_settings)
++    with pytest.raises(RuntimeError, match="disabled"):
++        cli.seed_official(apply=True)
++
++
++def test_read_only_api_lists_and_resolves_reviewed_sources(
++    test_app: FastAPI, seed_engine: Engine
++) -> None:
++    """Exercise listing, filtering, source provenance and synthetic-record exclusion."""
++
++    with Session(seed_engine) as session, session.begin():
++        seed_registry(session, load_manifest())
++        session.add(Scheme(id="stage1-demo-scheme", name="Synthetic", category="test_only"))
++    session_factory = sessionmaker(seed_engine)
++
++    def test_session() -> Iterator[Session]:
++        """Supply the local seeded SQLite session for endpoint tests."""
++
++        with session_factory() as session:
++            yield session
++
++    test_app.dependency_overrides[get_db_session] = test_session
++    try:
++        with TestClient(test_app) as client:
++            listing = client.get("/api/v1/schemes")
++            assert listing.status_code == 200
++            assert len(listing.json()) == 20
++            assert all(s["id"] != "stage1-demo-scheme" for s in listing.json())
++            subset = client.get("/api/v1/schemes", params={"category": "education"})
++            assert subset.status_code == 200
++            assert {s["id"] for s in subset.json()} == {
++                "nmmss", "pm-usp-csss", "pm-vidyalaxmi"
++            }
++            assert client.get("/api/v1/schemes", params={"status": "active"}).json() == []
++            detail = client.get("/api/v1/schemes/pm-kisan")
++            assert detail.status_code == 200
++            assert detail.json()["status"] == "unknown"
++            assert detail.json()["metadata"]["publish_ready"] is False
++            source_id = detail.json()["sources"][0]["id"]
++            source = client.get(f"/api/v1/sources/{source_id}")
++            assert source.status_code == 200
++            assert source.json()["metadata"]["content_review_status"] == "not_parsed"
++            missing_source = "/api/v1/sources/00000000-0000-4000-8000-000000000099"
++            assert client.get(missing_source).status_code == 404
++            assert client.get("/api/v1/sources/not-uuid").status_code == 422
++            assert client.get("/api/v1/schemes", params={"limit": 101}).status_code == 422
++    finally:
++        test_app.dependency_overrides.clear()
+diff --git a/data/seed/README.md b/data/seed/README.md
+new file mode 100644
+index 0000000..73409bf
+--- /dev/null
++++ b/data/seed/README.md
+@@ -0,0 +1,29 @@
++# Stage 2 — reviewed registry, **not** a verified eligibility corpus
++
++`central_schemes.json` contains 20 Central Government scheme identities and 21 source
++references, reviewed on the date in each `sources[].reviewed_on` field.
++
++The date means that the *identity of the linked government source* was checked; it does not
++mean that complete content, live availability, current benefits, eligibility, application
++links or deadlines were verified. Read the per-source `verification_method`:
++
++- `page_read`: a relevant official landing page was opened and read.
++- `search_result_review`: an official result/heading was inspected, but direct source
++  acquisition and document parsing were **not** performed.
++- `official_portal_reference`: an official portal link was established through an official
++  reference but content was not read.
++
++The database stores the review day on the source record as *midnight IST* with
++`timestamp_precision=calendar_day_ist`; it is **not** the exact time of review.
++
++Every scheme has `status=unknown`, `last_verified_at=null`, `publish_ready=false`,
++`eligibility_rule_coverage=not_reviewed`, and no machine-verified rule. This seed dataset is
++for discovery engineering, not for public eligibility decisions.
++
++An identified official source is not necessarily licensed for bulk copying. The
++PM SVANidhi portal is marked `do_not_copy_or_ingest_without_permission_review` because its
++published disclaimer restricts reproduction. Stage 3 must review access and licensing for
++**all** sources before downloading or indexing content. Do not scrape myScheme.
++
++Review this manifest before every public release; never update review dates automatically
++without a real review. See `docs/decisions/ADR-004-no-myscheme-scraping.md`.
+diff --git a/data/seed/central_schemes.json b/data/seed/central_schemes.json
+new file mode 100644
+index 0000000..a7207c3
+--- /dev/null
++++ b/data/seed/central_schemes.json
+@@ -0,0 +1,760 @@
++[
++  {
++    "scheme": {
++      "id": "pm-kisan",
++      "name": "Pradhan Mantri Kisan Samman Nidhi",
++      "short_name": "PM-KISAN",
++      "category": "agriculture",
++      "ministry": "Department of Agriculture and Farmers Welfare",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "farmers"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PM-KISAN official scheme portal",
++        "url": "https://pmkisan.gov.in/",
++        "authority": "Department of Agriculture and Farmers Welfare",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmfby",
++      "name": "Pradhan Mantri Fasal Bima Yojana",
++      "short_name": "PMFBY",
++      "category": "agriculture",
++      "ministry": "Ministry of Agriculture and Farmers Welfare",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "farmers"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PMFBY operational guidelines listing",
++        "url": "https://pmfby.gov.in/guidelines",
++        "authority": "Ministry of Agriculture and Farmers Welfare",
++        "source_type": "guideline",
++        "tier": "tier_1",
++        "authority_score": 100,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pm-kusum",
++      "name": "Pradhan Mantri Kisan Urja Suraksha evam Utthaan Mahabhiyan",
++      "short_name": "PM-KUSUM",
++      "category": "agriculture",
++      "ministry": "Ministry of New and Renewable Energy",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "farmers"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PM-KUSUM national portal",
++        "url": "https://pmkusum.mnre.gov.in/",
++        "authority": "Ministry of New and Renewable Energy",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pm-surya-ghar",
++      "name": "PM Surya Ghar: Muft Bijli Yojana",
++      "short_name": "PM Surya Ghar",
++      "category": "energy",
++      "ministry": "Ministry of New and Renewable Energy",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "households"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "MNRE rooftop solar and PM Surya Ghar guidelines",
++        "url": "https://mnre.gov.in/en/grid-connected-solar-rooftop-programme/",
++        "authority": "Ministry of New and Renewable Energy",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmay-g",
++      "name": "Pradhan Mantri Awaas Yojana - Gramin",
++      "short_name": "PMAY-G",
++      "category": "housing",
++      "ministry": "Ministry of Rural Development",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "rural_households"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PMAY-G government self-survey question page",
++        "url": "https://pmayg.nic.in/netiayHome/questions.html",
++        "authority": "Ministry of Rural Development",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmay-u-2",
++      "name": "Pradhan Mantri Awas Yojana - Urban 2.0",
++      "short_name": "PMAY-U 2.0",
++      "category": "housing",
++      "ministry": "Ministry of Housing and Urban Affairs",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "urban_households"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PMAY-U 2.0 official guidelines page",
++        "url": "https://pmay-urban.gov.in/pmay-u-2.0-guidelines",
++        "authority": "Ministry of Housing and Urban Affairs",
++        "source_type": "guideline",
++        "tier": "tier_1",
++        "authority_score": 100,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pm-jay",
++      "name": "Ayushman Bharat Pradhan Mantri Jan Arogya Yojana",
++      "short_name": "AB PM-JAY",
++      "category": "healthcare",
++      "ministry": "National Health Authority",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "households"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "National Health Authority PM-JAY explanatory publication",
++        "url": "https://nha.gov.in/img/resources/wall-painting-RFE-Updated-2.pdf",
++        "authority": "National Health Authority",
++        "source_type": "other",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmuy",
++      "name": "Pradhan Mantri Ujjwala Yojana",
++      "short_name": "PMUY",
++      "category": "women_child",
++      "ministry": "Ministry of Petroleum and Natural Gas",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "women",
++          "households"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PM Ujjwala official scheme portal",
++        "url": "https://pmuy.gov.in/index.aspx",
++        "authority": "Ministry of Petroleum and Natural Gas",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmmvy",
++      "name": "Pradhan Mantri Matru Vandana Yojana",
++      "short_name": "PMMVY",
++      "category": "women_child",
++      "ministry": "Ministry of Women and Child Development",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "women"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PMMVY government portal",
++        "url": "https://pmmvy.wcd.gov.in/",
++        "authority": "Ministry of Women and Child Development",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pm-vishwakarma",
++      "name": "PM Vishwakarma",
++      "short_name": "PM Vishwakarma",
++      "category": "msme",
++      "ministry": "Ministry of Micro Small and Medium Enterprises",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "artisans"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PM Vishwakarma government portal",
++        "url": "https://pmvishwakarma.gov.in/",
++        "authority": "Ministry of Micro Small and Medium Enterprises",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pm-svanidhi",
++      "name": "Prime Minister Street Vendor’s AtmaNirbhar Nidhi",
++      "short_name": "PM SVANidhi",
++      "category": "livelihood",
++      "ministry": "Ministry of Housing and Urban Affairs",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "street_vendors"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PM SVANidhi government application portal",
++        "url": "https://pmsvanidhi.mohua.gov.in/",
++        "authority": "Ministry of Housing and Urban Affairs",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "official_portal_reference",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "do_not_copy_or_ingest_without_permission_review"
++      },
++      {
++        "title": "Cabinet approval of PM SVANidhi restructuring (government announcement)",
++        "url": "https://www.pmindia.gov.in/en/news_updates/cabinet-approves-restructuring-extension-of-lending-period-beyond-31-12-2024-of-pm-street-vendors-atmanirbhar-nidhi-pm-svanidhi-scheme/",
++        "authority": "Government of India",
++        "source_type": "press_release",
++        "tier": "tier_3",
++        "authority_score": 60,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmjdy",
++      "name": "Pradhan Mantri Jan-Dhan Yojana",
++      "short_name": "PMJDY",
++      "category": "financial_inclusion",
++      "ministry": "Department of Financial Services",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "unbanked_people"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PMJDY official scheme details",
++        "url": "https://www.pmjdy.gov.in/scheme",
++        "authority": "Department of Financial Services",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "apy",
++      "name": "Atal Pension Yojana",
++      "short_name": "APY",
++      "category": "social_security",
++      "ministry": "Pension Fund Regulatory and Development Authority",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "workers",
++          "savers"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PFRDA APY official scheme page",
++        "url": "https://pfrda.org.in/schemes/atal-pension-yojana-apy",
++        "authority": "Pension Fund Regulatory and Development Authority",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "page_read",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmsby",
++      "name": "Pradhan Mantri Suraksha Bima Yojana",
++      "short_name": "PMSBY",
++      "category": "social_security",
++      "ministry": "Department of Financial Services",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "account_holders"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "Jan Suraksha PMSBY official FAQ",
++        "url": "https://jansuraksha.gov.in/Files/PMSBY/ENGLISH/FAQ.pdf",
++        "authority": "Department of Financial Services",
++        "source_type": "other",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pmjjby",
++      "name": "Pradhan Mantri Jeevan Jyoti Bima Yojana",
++      "short_name": "PMJJBY",
++      "category": "social_security",
++      "ministry": "Department of Financial Services",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "account_holders"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "Jan Suraksha official scheme portal",
++        "url": "https://jansuraksha.gov.in/",
++        "authority": "Department of Financial Services",
++        "source_type": "ministry_page",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "official_portal_reference",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "nmmss",
++      "name": "National Means-cum-Merit Scholarship Scheme",
++      "short_name": "NMMSS",
++      "category": "education",
++      "ministry": "Department of School Education and Literacy",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "students"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "NMMSS revised official guidelines",
++        "url": "https://dsel.education.gov.in/sites/default/files/NMMSS_Guidelines_22.pdf",
++        "authority": "Department of School Education and Literacy",
++        "source_type": "guideline",
++        "tier": "tier_1",
++        "authority_score": 100,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pm-usp-csss",
++      "name": "PM-USP Central Sector Scheme of Scholarship for College and University Students",
++      "short_name": "PM-USP CSSS",
++      "category": "education",
++      "ministry": "Department of Higher Education",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "students"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "Updated PM-USP CSSS official guidelines",
++        "url": "https://www.education.gov.in/sites/upload_files/mhrd/files/upload_document/PM_USP_CSSS_guidelines_updated.pdf",
++        "authority": "Department of Higher Education",
++        "source_type": "guideline",
++        "tier": "tier_1",
++        "authority_score": 100,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "pm-vidyalaxmi",
++      "name": "Pradhan Mantri Vidyalaxmi",
++      "short_name": "PM-Vidyalaxmi",
++      "category": "education",
++      "ministry": "Department of Higher Education",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "students"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "PM-Vidyalaxmi official guidelines",
++        "url": "https://www.education.gov.in/sites/upload_files/mhrd/files/document-reports/PM_Vidyalaxmi_Scheme_Guidelines.pdf",
++        "authority": "Department of Higher Education",
++        "source_type": "guideline",
++        "tier": "tier_1",
++        "authority_score": 100,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "mgnrega",
++      "name": "Mahatma Gandhi National Rural Employment Guarantee Scheme",
++      "short_name": "MGNREGS",
++      "category": "livelihood",
++      "ministry": "Ministry of Rural Development",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "rural_workers"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "Ministry of Rural Development MGNREGA FAQs",
++        "url": "https://rural.gov.in/sites/default/files/MGNREGA_FAQ_ENGLISH.pdf",
++        "authority": "Ministry of Rural Development",
++        "source_type": "other",
++        "tier": "tier_1",
++        "authority_score": 95,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  },
++  {
++    "scheme": {
++      "id": "nsap",
++      "name": "National Social Assistance Programme",
++      "short_name": "NSAP",
++      "category": "social_security",
++      "ministry": "Ministry of Rural Development",
++      "scope": "central",
++      "status": "unknown",
++      "metadata": {
++        "target_groups": [
++          "senior_citizens",
++          "persons_with_disabilities",
++          "families"
++        ],
++        "verification_scope": "scheme_identity_and_source_registry_only",
++        "eligibility_rule_coverage": "not_reviewed",
++        "benefit_and_deadline_status": "not_verified",
++        "publish_ready": false
++      }
++    },
++    "sources": [
++      {
++        "title": "Ministry of Rural Development NSAP guidelines",
++        "url": "https://rural.gov.in/sites/default/files/NSAP_Guidelines_English.pdf",
++        "authority": "Ministry of Rural Development",
++        "source_type": "guideline",
++        "tier": "tier_1",
++        "authority_score": 100,
++        "is_official": true,
++        "reviewed_on": "2026-09-25",
++        "verification_method": "search_result_review",
++        "verification_scope": "government_source_identity_only",
++        "content_review_status": "not_parsed",
++        "acquisition_policy": "manual_review_required_before_download"
++      }
++    ],
++    "eligibility_rules": []
++  }
++]
+diff --git a/docs/architecture/STAGE-2-ACCEPTANCE.md b/docs/architecture/STAGE-2-ACCEPTANCE.md
+new file mode 100644
+index 0000000..3159a5f
+--- /dev/null
++++ b/docs/architecture/STAGE-2-ACCEPTANCE.md
+@@ -0,0 +1,62 @@
++# Stage 2 acceptance — official source registry
++
++## Boundary
++
++Adds a read-only official-source registry and an offline validation/import path to the
++existing Stage 1 domain model. **No** new ORM entities, database migrations, scraping,
++download/parsing, RAG, active-status claims, benefit amounts or eligibility evaluation.
++
++## Tests / commands
++
++Run from `backend/` in the project's virtual environment:
++
++```powershell
++python -m pytest tests/test_seed_registry.py -q
++python -m pytest -q
++python -m yojanamitra.cli validate-seed
++python -m alembic upgrade head
++python -m yojanamitra.cli seed-registry
++python -m yojanamitra.cli seed-registry --apply
++python -m yojanamitra.cli seed-registry --apply
++python -m uvicorn yojanamitra.main:app --reload
++```
++
++For HTTP checks, use `/api/v1/health`, `/api/v1/schemes`, `/api/v1/schemes/pm-kisan`, and
++`/api/v1/sources/{source_uuid}`. Filtering: `?category=education`; active-only returns none.
++
++## Implementation gate
++
++- Manifest validation requires one government primary source per scheme.
++- Official HTTPS host allowlisting; rejects deceptive hostnames and myScheme in seed input.
++- 20 identities / 21 sources; primary source for all; duplicate IDs and URLs rejected.
++- Reproducible UUIDs and transaction-scoped import; reruns do not create duplicate rows.
++- Conflicting existing records stop import and rollback rather than overwrite.
++- Source review *scope* and *method* are retained; unparsed content is labeled unparsed.
++- Every scheme remains `status=unknown`, `publish_ready=false` and has no rules.
++- The original synthetic test record is excluded from default scheme listing.
++- Stage 0 and Stage 1 tests remain in the suite.
++- All added functions and methods have docstrings.
++
++## Environment limitations
++
++The workspace validates SQLite functionality and HTTP contracts. A live PostgreSQL service
++is not provided here. Ruff and mypy may need to be run in your own project virtual
++environment if unavailable in the artifact-build environment. Do not mark those checks
++successful until they actually run.
++
++## Publication gate — **not** passed
++
++This stage does **not** approve public-facing eligibility advice. Full content and license
++reviews, freshness monitoring, detailed rules and evidence retrieval remain future stages.
++
++## Observed results in the artifact workspace
++
++- `python -m pytest -q` from root and backend: **43 tests passed** each.
++- AST documentation audit: **88 functions checked, 0 missing docstrings**.
++- Manual line-length audit on the new/changed Python files: no lines over 100 characters.
++- Local SQLite Alembic upgrade completed; CLI dry run reported 20/21 and no write.
++- First explicit import created 20 schemes and 21 sources; second created 0/0.
++- Live Uvicorn HTTP checks: health 200, scheme list 200 (20 records),
++  education filter 200 (3 records), scheme detail 200 (unknown/not publish-ready),
++  source detail 200 (identity-only), active filter 200 (empty).
++- Ruff, mypy and real PostgreSQL were **not executed** in this environment.
+diff --git a/docs/architecture/STAGE-2-SOURCE-LEDGER.md b/docs/architecture/STAGE-2-SOURCE-LEDGER.md
+new file mode 100644
+index 0000000..7f15112
+--- /dev/null
++++ b/docs/architecture/STAGE-2-SOURCE-LEDGER.md
+@@ -0,0 +1,33 @@
++# Stage 2 — source identity review ledger
++
++The table records official scheme/source identities checked for the initial development corpus.
++It does **not** certify current scheme operation, complete benefits, eligibility or deadlines.
++The three review-method levels are defined in `data/seed/README.md`.
++
++| Scheme | Primary government source | Review method | Date (IST) |
++|---|---|---|---|
++| PM-KISAN | [PM-KISAN official scheme portal](https://pmkisan.gov.in/) | `page_read` | 2026-09-25 |
++| PMFBY | [PMFBY operational guidelines listing](https://pmfby.gov.in/guidelines) | `page_read` | 2026-09-25 |
++| PM-KUSUM | [PM-KUSUM national portal](https://pmkusum.mnre.gov.in/) | `page_read` | 2026-09-25 |
++| PM Surya Ghar | [MNRE rooftop solar and PM Surya Ghar guidelines](https://mnre.gov.in/en/grid-connected-solar-rooftop-programme/) | `page_read` | 2026-09-25 |
++| PMAY-G | [PMAY-G government self-survey question page](https://pmayg.nic.in/netiayHome/questions.html) | `search_result_review` | 2026-09-25 |
++| PMAY-U 2.0 | [PMAY-U 2.0 official guidelines page](https://pmay-urban.gov.in/pmay-u-2.0-guidelines) | `page_read` | 2026-09-25 |
++| AB PM-JAY | [National Health Authority PM-JAY explanatory publication](https://nha.gov.in/img/resources/wall-painting-RFE-Updated-2.pdf) | `search_result_review` | 2026-09-25 |
++| PMUY | [PM Ujjwala official scheme portal](https://pmuy.gov.in/index.aspx) | `page_read` | 2026-09-25 |
++| PMMVY | [PMMVY government portal](https://pmmvy.wcd.gov.in/) | `page_read` | 2026-09-25 |
++| PM Vishwakarma | [PM Vishwakarma government portal](https://pmvishwakarma.gov.in/) | `page_read` | 2026-09-25 |
++| PM SVANidhi | [PM SVANidhi government application portal](https://pmsvanidhi.mohua.gov.in/) | `official_portal_reference` | 2026-09-25 |
++| PMJDY | [PMJDY official scheme details](https://www.pmjdy.gov.in/scheme) | `page_read` | 2026-09-25 |
++| APY | [PFRDA APY official scheme page](https://pfrda.org.in/schemes/atal-pension-yojana-apy) | `page_read` | 2026-09-25 |
++| PMSBY | [Jan Suraksha PMSBY official FAQ](https://jansuraksha.gov.in/Files/PMSBY/ENGLISH/FAQ.pdf) | `search_result_review` | 2026-09-25 |
++| PMJJBY | [Jan Suraksha official scheme portal](https://jansuraksha.gov.in/) | `official_portal_reference` | 2026-09-25 |
++| NMMSS | [NMMSS revised official guidelines](https://dsel.education.gov.in/sites/default/files/NMMSS_Guidelines_22.pdf) | `search_result_review` | 2026-09-25 |
++| PM-USP CSSS | [Updated PM-USP CSSS official guidelines](https://www.education.gov.in/sites/upload_files/mhrd/files/upload_document/PM_USP_CSSS_guidelines_updated.pdf) | `search_result_review` | 2026-09-25 |
++| PM-Vidyalaxmi | [PM-Vidyalaxmi official guidelines](https://www.education.gov.in/sites/upload_files/mhrd/files/document-reports/PM_Vidyalaxmi_Scheme_Guidelines.pdf) | `search_result_review` | 2026-09-25 |
++| MGNREGS | [Ministry of Rural Development MGNREGA FAQs](https://rural.gov.in/sites/default/files/MGNREGA_FAQ_ENGLISH.pdf) | `search_result_review` | 2026-09-25 |
++| NSAP | [Ministry of Rural Development NSAP guidelines](https://rural.gov.in/sites/default/files/NSAP_Guidelines_English.pdf) | `search_result_review` | 2026-09-25 |
++
++Additional official context link: PM SVANidhi Cabinet announcement (see JSON).
++
++The original source pages/links should be revisited and document permissions reviewed in Stage 3.
++No structured rule or public eligibility claim is approved by this ledger.
+diff --git a/docs/decisions/ADR-002-official-source-review.md b/docs/decisions/ADR-002-official-source-review.md
+new file mode 100644
+index 0000000..ddc7aae
+--- /dev/null
++++ b/docs/decisions/ADR-002-official-source-review.md
+@@ -0,0 +1,32 @@
++# ADR-002 — Separate registry verification from substantive scheme verification
++
++**Status:** Accepted in Stage 2.
++
++## Context
++
++Finding a page on a government domain verifies neither current scheme status nor the
++completeness of eligibility rules. Source pages can be outdated, withdrawn, region-specific,
++or subject to license restrictions.
++
++## Decision
++
++- Record 20 seed scheme identities and 21 source links with a review method and date.
++- Keep every `Scheme.status` as `unknown` and `Scheme.last_verified_at` as null.
++- `Source.last_verified_at` stores only the *calendar day* when the link/identity was reviewed,
++  normalized to midnight IST. Metadata explicitly states `timestamp_precision` and
++  `verification_scope=government_source_identity_only`.
++- Preserve the distinction between `page_read`, `search_result_review`, and
++  `official_portal_reference` (a link established via another official page).
++- `content_review_status=not_parsed`, `publish_ready=false`, and
++  `eligibility_rule_coverage=not_reviewed` are explicit for every record.
++- No `EligibilityRule`, `Document` or `Chunk` rows are fabricated in this stage. Stage 3 must
++  review source permissions and provenance before acquisition; Stage 8 must review
++  complete, versioned rules before machine evaluation.
++- Registry imports are offline, validation-first, transactional, deterministic and
++  conflict-rejecting; records are never silently overwritten.
++
++## Trade-offs
++
++Citizen-facing scheme lists can display identities and links but cannot yet establish
++eligibility, amount, deadline, active status or application requirements. This is intentional:
++an incorrect statement about government benefits is costlier than an explicit unknown.
+diff --git a/docs/decisions/ADR-004-no-myscheme-scraping.md b/docs/decisions/ADR-004-no-myscheme-scraping.md
+new file mode 100644
+index 0000000..093fd63
+--- /dev/null
++++ b/docs/decisions/ADR-004-no-myscheme-scraping.md
+@@ -0,0 +1,26 @@
++# ADR-004 — Do not scrape myScheme
++
++**Status:** Accepted in Stage 2.
++
++## Context
++
++YojanaMitra needs authoritative evidence about government schemes. myScheme is a useful
++Government of India discovery portal, but the original implementation specification records
++its restrictions on automated scraper/bot access without written authorization.
++
++## Decision
++
++- Do not implement an automated myScheme scraper, crawler, bulk fetcher or bypass.
++- Do not use myScheme URLs as input to the automated Stage 2 seed loader.
++- Curate metadata from the responsible ministry/department, scheme portals, official APIs,
++  downloadable datasets and official government guidelines.
++- Review copyright/access conditions and robots/terms **before** Stage 3 downloads;
++  a government URL is not automatically permission to copy or republish its contents.
++- If written authorization or an approved API is obtained later, document it in a new ADR.
++
++## Trade-offs
++
++Manual source review is slower and restricts initial coverage. It avoids building a data
++pipeline whose principal access path may be unauthorized, and improves traceability to the
++responsible authority. We preserve source provenance rather than accepting aggregated
++summary claims as an independent ground truth.

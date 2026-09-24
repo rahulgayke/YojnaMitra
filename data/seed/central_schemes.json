@@ -1,0 +1,760 @@
+[
+  {
+    "scheme": {
+      "id": "pm-kisan",
+      "name": "Pradhan Mantri Kisan Samman Nidhi",
+      "short_name": "PM-KISAN",
+      "category": "agriculture",
+      "ministry": "Department of Agriculture and Farmers Welfare",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "farmers"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PM-KISAN official scheme portal",
+        "url": "https://pmkisan.gov.in/",
+        "authority": "Department of Agriculture and Farmers Welfare",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmfby",
+      "name": "Pradhan Mantri Fasal Bima Yojana",
+      "short_name": "PMFBY",
+      "category": "agriculture",
+      "ministry": "Ministry of Agriculture and Farmers Welfare",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "farmers"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PMFBY operational guidelines listing",
+        "url": "https://pmfby.gov.in/guidelines",
+        "authority": "Ministry of Agriculture and Farmers Welfare",
+        "source_type": "guideline",
+        "tier": "tier_1",
+        "authority_score": 100,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pm-kusum",
+      "name": "Pradhan Mantri Kisan Urja Suraksha evam Utthaan Mahabhiyan",
+      "short_name": "PM-KUSUM",
+      "category": "agriculture",
+      "ministry": "Ministry of New and Renewable Energy",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "farmers"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PM-KUSUM national portal",
+        "url": "https://pmkusum.mnre.gov.in/",
+        "authority": "Ministry of New and Renewable Energy",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pm-surya-ghar",
+      "name": "PM Surya Ghar: Muft Bijli Yojana",
+      "short_name": "PM Surya Ghar",
+      "category": "energy",
+      "ministry": "Ministry of New and Renewable Energy",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "households"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "MNRE rooftop solar and PM Surya Ghar guidelines",
+        "url": "https://mnre.gov.in/en/grid-connected-solar-rooftop-programme/",
+        "authority": "Ministry of New and Renewable Energy",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmay-g",
+      "name": "Pradhan Mantri Awaas Yojana - Gramin",
+      "short_name": "PMAY-G",
+      "category": "housing",
+      "ministry": "Ministry of Rural Development",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "rural_households"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PMAY-G government self-survey question page",
+        "url": "https://pmayg.nic.in/netiayHome/questions.html",
+        "authority": "Ministry of Rural Development",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmay-u-2",
+      "name": "Pradhan Mantri Awas Yojana - Urban 2.0",
+      "short_name": "PMAY-U 2.0",
+      "category": "housing",
+      "ministry": "Ministry of Housing and Urban Affairs",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "urban_households"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PMAY-U 2.0 official guidelines page",
+        "url": "https://pmay-urban.gov.in/pmay-u-2.0-guidelines",
+        "authority": "Ministry of Housing and Urban Affairs",
+        "source_type": "guideline",
+        "tier": "tier_1",
+        "authority_score": 100,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pm-jay",
+      "name": "Ayushman Bharat Pradhan Mantri Jan Arogya Yojana",
+      "short_name": "AB PM-JAY",
+      "category": "healthcare",
+      "ministry": "National Health Authority",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "households"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "National Health Authority PM-JAY explanatory publication",
+        "url": "https://nha.gov.in/img/resources/wall-painting-RFE-Updated-2.pdf",
+        "authority": "National Health Authority",
+        "source_type": "other",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmuy",
+      "name": "Pradhan Mantri Ujjwala Yojana",
+      "short_name": "PMUY",
+      "category": "women_child",
+      "ministry": "Ministry of Petroleum and Natural Gas",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "women",
+          "households"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PM Ujjwala official scheme portal",
+        "url": "https://pmuy.gov.in/index.aspx",
+        "authority": "Ministry of Petroleum and Natural Gas",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmmvy",
+      "name": "Pradhan Mantri Matru Vandana Yojana",
+      "short_name": "PMMVY",
+      "category": "women_child",
+      "ministry": "Ministry of Women and Child Development",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "women"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PMMVY government portal",
+        "url": "https://pmmvy.wcd.gov.in/",
+        "authority": "Ministry of Women and Child Development",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pm-vishwakarma",
+      "name": "PM Vishwakarma",
+      "short_name": "PM Vishwakarma",
+      "category": "msme",
+      "ministry": "Ministry of Micro Small and Medium Enterprises",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "artisans"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PM Vishwakarma government portal",
+        "url": "https://pmvishwakarma.gov.in/",
+        "authority": "Ministry of Micro Small and Medium Enterprises",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pm-svanidhi",
+      "name": "Prime Minister Street Vendor’s AtmaNirbhar Nidhi",
+      "short_name": "PM SVANidhi",
+      "category": "livelihood",
+      "ministry": "Ministry of Housing and Urban Affairs",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "street_vendors"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PM SVANidhi government application portal",
+        "url": "https://pmsvanidhi.mohua.gov.in/",
+        "authority": "Ministry of Housing and Urban Affairs",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "official_portal_reference",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "do_not_copy_or_ingest_without_permission_review"
+      },
+      {
+        "title": "Cabinet approval of PM SVANidhi restructuring (government announcement)",
+        "url": "https://www.pmindia.gov.in/en/news_updates/cabinet-approves-restructuring-extension-of-lending-period-beyond-31-12-2024-of-pm-street-vendors-atmanirbhar-nidhi-pm-svanidhi-scheme/",
+        "authority": "Government of India",
+        "source_type": "press_release",
+        "tier": "tier_3",
+        "authority_score": 60,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmjdy",
+      "name": "Pradhan Mantri Jan-Dhan Yojana",
+      "short_name": "PMJDY",
+      "category": "financial_inclusion",
+      "ministry": "Department of Financial Services",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "unbanked_people"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PMJDY official scheme details",
+        "url": "https://www.pmjdy.gov.in/scheme",
+        "authority": "Department of Financial Services",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "apy",
+      "name": "Atal Pension Yojana",
+      "short_name": "APY",
+      "category": "social_security",
+      "ministry": "Pension Fund Regulatory and Development Authority",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "workers",
+          "savers"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PFRDA APY official scheme page",
+        "url": "https://pfrda.org.in/schemes/atal-pension-yojana-apy",
+        "authority": "Pension Fund Regulatory and Development Authority",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "page_read",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmsby",
+      "name": "Pradhan Mantri Suraksha Bima Yojana",
+      "short_name": "PMSBY",
+      "category": "social_security",
+      "ministry": "Department of Financial Services",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "account_holders"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "Jan Suraksha PMSBY official FAQ",
+        "url": "https://jansuraksha.gov.in/Files/PMSBY/ENGLISH/FAQ.pdf",
+        "authority": "Department of Financial Services",
+        "source_type": "other",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pmjjby",
+      "name": "Pradhan Mantri Jeevan Jyoti Bima Yojana",
+      "short_name": "PMJJBY",
+      "category": "social_security",
+      "ministry": "Department of Financial Services",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "account_holders"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "Jan Suraksha official scheme portal",
+        "url": "https://jansuraksha.gov.in/",
+        "authority": "Department of Financial Services",
+        "source_type": "ministry_page",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "official_portal_reference",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "nmmss",
+      "name": "National Means-cum-Merit Scholarship Scheme",
+      "short_name": "NMMSS",
+      "category": "education",
+      "ministry": "Department of School Education and Literacy",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "students"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "NMMSS revised official guidelines",
+        "url": "https://dsel.education.gov.in/sites/default/files/NMMSS_Guidelines_22.pdf",
+        "authority": "Department of School Education and Literacy",
+        "source_type": "guideline",
+        "tier": "tier_1",
+        "authority_score": 100,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pm-usp-csss",
+      "name": "PM-USP Central Sector Scheme of Scholarship for College and University Students",
+      "short_name": "PM-USP CSSS",
+      "category": "education",
+      "ministry": "Department of Higher Education",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "students"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "Updated PM-USP CSSS official guidelines",
+        "url": "https://www.education.gov.in/sites/upload_files/mhrd/files/upload_document/PM_USP_CSSS_guidelines_updated.pdf",
+        "authority": "Department of Higher Education",
+        "source_type": "guideline",
+        "tier": "tier_1",
+        "authority_score": 100,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "pm-vidyalaxmi",
+      "name": "Pradhan Mantri Vidyalaxmi",
+      "short_name": "PM-Vidyalaxmi",
+      "category": "education",
+      "ministry": "Department of Higher Education",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "students"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "PM-Vidyalaxmi official guidelines",
+        "url": "https://www.education.gov.in/sites/upload_files/mhrd/files/document-reports/PM_Vidyalaxmi_Scheme_Guidelines.pdf",
+        "authority": "Department of Higher Education",
+        "source_type": "guideline",
+        "tier": "tier_1",
+        "authority_score": 100,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "mgnrega",
+      "name": "Mahatma Gandhi National Rural Employment Guarantee Scheme",
+      "short_name": "MGNREGS",
+      "category": "livelihood",
+      "ministry": "Ministry of Rural Development",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "rural_workers"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "Ministry of Rural Development MGNREGA FAQs",
+        "url": "https://rural.gov.in/sites/default/files/MGNREGA_FAQ_ENGLISH.pdf",
+        "authority": "Ministry of Rural Development",
+        "source_type": "other",
+        "tier": "tier_1",
+        "authority_score": 95,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  },
+  {
+    "scheme": {
+      "id": "nsap",
+      "name": "National Social Assistance Programme",
+      "short_name": "NSAP",
+      "category": "social_security",
+      "ministry": "Ministry of Rural Development",
+      "scope": "central",
+      "status": "unknown",
+      "metadata": {
+        "target_groups": [
+          "senior_citizens",
+          "persons_with_disabilities",
+          "families"
+        ],
+        "verification_scope": "scheme_identity_and_source_registry_only",
+        "eligibility_rule_coverage": "not_reviewed",
+        "benefit_and_deadline_status": "not_verified",
+        "publish_ready": false
+      }
+    },
+    "sources": [
+      {
+        "title": "Ministry of Rural Development NSAP guidelines",
+        "url": "https://rural.gov.in/sites/default/files/NSAP_Guidelines_English.pdf",
+        "authority": "Ministry of Rural Development",
+        "source_type": "guideline",
+        "tier": "tier_1",
+        "authority_score": 100,
+        "is_official": true,
+        "reviewed_on": "2026-09-25",
+        "verification_method": "search_result_review",
+        "verification_scope": "government_source_identity_only",
+        "content_review_status": "not_parsed",
+        "acquisition_policy": "manual_review_required_before_download"
+      }
+    ],
+    "eligibility_rules": []
+  }
+]
