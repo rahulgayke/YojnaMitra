@@ -1,1 +1,0 @@
-"""YojanaMitra test suite."""

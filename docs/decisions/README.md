@@ -1,5 +1,15 @@
 # Architecture Decision Records
 
-The full ADR set will be introduced as the corresponding architecture decisions become active.
+Architecture Decision Records (ADRs) document decisions that are expensive or confusing to rediscover later.
 
-Stage 1 establishes the ADR directory only. Later stages will add the project-specific records required by the implementation plan, including Qdrant, hybrid retrieval, deterministic eligibility, no automated myScheme scraping, BGE-M3 and LangGraph decisions.
+Each ADR should describe:
+
+- context
+- decision
+- alternatives considered
+- consequences/trade-offs
+- status
+
+Use `ADR-TEMPLATE.md` when adding a decision.
+
+Planned ADRs from the master implementation requirements include Qdrant, hybrid retrieval, deterministic eligibility, no unauthorized myScheme scraping, BGE-M3, and LangGraph.

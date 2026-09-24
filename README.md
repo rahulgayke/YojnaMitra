@@ -1,125 +1,155 @@
 # YojanaMitra
 
-YojanaMitra is an open-source AI engineering project for helping Indian citizens discover and understand government schemes using structured eligibility logic and official evidence.
+YojanaMitra is an open-source government-scheme discovery and guidance platform for Indian citizens. The system will eventually combine verified government information, deterministic eligibility evaluation, retrieval-augmented generation (RAG), and a citizen-facing web application.
 
-This repository snapshot implements **Stage 1 — Repository Foundation only**.
+This repository is being built incrementally. **Stage 0 intentionally contains no scheme database, vector database, LLM, RAG pipeline, eligibility engine, or production deployment infrastructure.**
 
-## Stage 1 included
+## Stage 0 scope
 
-- Python 3.11 project using a `src/` layout
-- FastAPI application
-- PostgreSQL connectivity
-- Redis connectivity
-- Qdrant connectivity
-- Docker Compose local stack
-- Liveness and readiness health endpoints
-- Pytest unit and integration test foundations
-- Ruff, mypy, Bandit and pip-audit checks
-- GitHub Actions CI
-- Docker image build
+Stage 0 establishes the development contract and the smallest runnable backend slice:
 
-## Deliberately not implemented yet
+- Python backend package
+- environment-based configuration
+- minimal FastAPI application
+- `GET /api/v1/health`
+- shared API response/error schemas
+- Pytest smoke tests
+- documentation and ADR structure
+- separate frontend application boundary
+- repeatable local commands for every test gate
 
-The following belong to later stages and are intentionally absent:
-
-- Scheme / Source / EligibilityRule / Document / Chunk / UserProfile models
-- Government scheme dataset
-- Eligibility engine
-- Parsing, chunking, embeddings and RAG
-- Retrieval evaluation
-- Hybrid retrieval and reranking
-- LangGraph agents
-- Frontend
-- Multilingual and voice features
+See [`TASK_TRACKER.md`](TASK_TRACKER.md) for stage-by-stage delivery status.
 
 ## Repository layout
 
 ```text
-.
-├── .github/workflows/ci.yml
-├── docs/decisions/
-├── scripts/wait_for_services.py
-├── src/yojanamitra/
-│   ├── api/routes/health.py
-│   ├── core/config.py
-│   ├── core/logging.py
-│   ├── infrastructure/cache.py
-│   ├── infrastructure/database.py
-│   ├── infrastructure/vector_store.py
-│   └── main.py
-├── tests/
-│   ├── integration/
-│   └── unit/
-├── .env.example
-├── docker-compose.yml
-├── Dockerfile
-├── Makefile
-└── pyproject.toml
+yojanamitra/
+├── backend/                 # FastAPI + future AI/domain services
+│   ├── src/yojanamitra/
+│   └── tests/
+├── frontend/                # Separate citizen-facing web application
+├── docs/
+│   ├── architecture/
+│   ├── decisions/
+│   └── standards/
+├── PROJECT_DELIVERY_PLAN.md
+├── TASK_TRACKER.md
+└── OPEN_SOURCE_STACK.md
 ```
 
-## Local setup
+## Prerequisites
 
-### Option A — Docker Compose
+- Python 3.11 or newer
+- Git
 
-```bash
-docker compose up --build
-```
+No Docker, database, model server, or frontend runtime is required for Stage 0.
 
-The Compose file has safe local-development defaults. Copy `.env.example` to `.env` only when you want to override them.
+## Backend setup
 
-Then open:
+Run the installation and API commands from the `backend` directory. Tests also work
+from the repository root using its `pytest.ini`; both paths explicitly load this checkout.
 
-- API: `http://localhost:8000`
-- Swagger UI: `http://localhost:8000/docs`
-- Liveness: `http://localhost:8000/api/v1/health/live`
-- Readiness: `http://localhost:8000/api/v1/health/ready`
+### 1. Create a virtual environment
 
-### Option B — Run API locally, infrastructure in Docker
-
-```bash
-cp .env.example .env
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-python -m pip install -e ".[dev]"
-
-docker compose up -d postgres redis qdrant
-```
-
-If running the API on the host instead of inside Docker, override service hosts:
-
-```bash
-export POSTGRES_HOST=localhost
-export REDIS_URL=redis://localhost:6379/0
-export QDRANT_URL=http://localhost:6333
-uvicorn yojanamitra.main:app --reload
-```
-
-On PowerShell:
+Windows PowerShell:
 
 ```powershell
-$env:POSTGRES_HOST="localhost"
-$env:REDIS_URL="redis://localhost:6379/0"
-$env:QDRANT_URL="http://localhost:6333"
-uvicorn yojanamitra.main:app --reload
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-## Tests and quality checks
+macOS/Linux:
 
 ```bash
-pytest tests/unit -q
-RUN_INTEGRATION=1 pytest tests/integration -q
-ruff check .
-mypy src
-bandit -q -r src
-pip-audit
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-## Health contract
+### 2. Install the backend and developer dependencies
 
-`GET /api/v1/health/live` only verifies that the API process is alive.
+```bash
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
 
-`GET /api/v1/health/ready` verifies dependencies and returns HTTP 200 only when PostgreSQL, Redis and Qdrant are reachable. It returns HTTP 503 if one or more dependencies are unavailable.
+### 3. Run tests
 
-## Next stage
+```bash
+python -m pytest
+```
 
-**Stage 2 — Data Model** should add `Scheme`, `Source`, `EligibilityRule`, `Document`, `Chunk`, and `UserProfile`, with database migrations and model-level tests.
+Expected Stage 0 result: all tests pass. You can also return to the repository
+root and run `python -m pytest` there. The root `pytest.ini` ensures the
+current `backend/src` package is used even if an older YojanaMitra stage was
+previously installed.
+
+If imports seem wrong, use this diagnostic from `backend/`:
+
+```powershell
+python -c "import yojanamitra; print(yojanamitra.__file__)"
+```
+
+It should point to this checkout's `backend/src/yojanamitra/__init__.py`.
+Do not mix Stage 0 and the older Stage 1/2 repositories in one virtual environment.
+Create/activate `backend/.venv` before installing this project.
+
+### 4. Start the API
+
+```bash
+python -m uvicorn yojanamitra.main:app --reload
+```
+
+Then test it from another terminal:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "service": "yojanamitra-api",
+  "environment": "local",
+  "api_version": "v1"
+}
+```
+
+Interactive OpenAPI docs are available locally at:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+## Local quality checks
+
+Use module-style commands so they work reliably across Windows, macOS, and Linux:
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy src
+python -m pytest
+```
+
+Ruff formatting fixes can be applied with:
+
+```bash
+python -m ruff format .
+python -m ruff check . --fix
+```
+
+## Development rule
+
+Every stage follows the same sequence:
+
+1. Define the service/layer contract.
+2. Implement the smallest working unit.
+3. Add unit tests.
+4. Add an integration/endpoint/CLI check where appropriate.
+5. Run the complete test gate.
+6. Update `TASK_TRACKER.md`.
+7. Only then integrate the next service.
+
+Every Python function and method must have a useful docstring. Comments should explain non-obvious decisions rather than restating the code.

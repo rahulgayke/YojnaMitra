@@ -1,1 +1,0 @@
-"""YojanaMitra application package."""

@@ -1,19 +1,29 @@
+# Python
 __pycache__/
 *.py[cod]
-*.so
-.Python
-.venv/
-venv/
-.env
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Coverage
 .coverage
 htmlcov/
-dist/
-build/
-*.egg-info/
-.idea/
+
+# Frontend
+node_modules/
+.next/
+out/
+
+# IDE / OS
 .vscode/
+.idea/
 .DS_Store
-*.log
+Thumbs.db
