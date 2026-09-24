@@ -27,3 +27,8 @@ out/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local Stage 1 database files
+*.db
+*.db-journal
+*.sqlite3
